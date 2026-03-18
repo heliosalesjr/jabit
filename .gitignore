@@ -10,11 +10,21 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
 
+# Environment variables (all variants)
 .env
-.env.local
+.env.*
+*.local
+!.env.example
 
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebaserc
+
+# Sensitive docs
 SETUP.md
 
 # Editor directories and files
@@ -27,3 +37,8 @@ SETUP.md
 *.njsproj
 *.sln
 *.sw?
+
+# macOS
+.AppleDouble
+.LSOverride
+Thumbs.db

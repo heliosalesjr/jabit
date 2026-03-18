@@ -13,12 +13,7 @@
 Edite `.env.local` com suas credenciais:
 
 ```
-VITE_FIREBASE_API_KEY=sua_api_key
-VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=seu_project_id
-VITE_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
-VITE_FIREBASE_APP_ID=seu_app_id
+
 ```
 
 ## 3. Firestore Security Rules

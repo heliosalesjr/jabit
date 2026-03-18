@@ -49,13 +49,14 @@ export function subscribeUserProfile(uid: string, cb: (profile: UserProfile | nu
 
 // ─── Habits ──────────────────────────────────────────────────────
 export function subscribeHabits(uid: string, cb: (habits: Habit[]) => void) {
-  const q = query(
-    collection(db, 'users', uid, 'habits'),
-    where('archivedAt', '==', null),
-    orderBy('order')
-  )
+  // Filter archivedAt client-side to avoid needing a composite index
+  const q = query(collection(db, 'users', uid, 'habits'), orderBy('createdAt'))
   return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Habit)))
+    const habits = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Habit))
+      .filter((h) => !h.archivedAt)
+      .sort((a, b) => a.order - b.order)
+    cb(habits)
   })
 }
 
@@ -113,9 +114,12 @@ export async function toggleHabitLog(
 
 // ─── Journal ──────────────────────────────────────────────────────
 export function subscribeJournalEntries(uid: string, cb: (entries: JournalEntry[]) => void) {
-  const q = query(collection(db, 'users', uid, 'journalEntries'), orderBy('date', 'desc'))
-  return onSnapshot(q, (snap) => {
-    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as JournalEntry)))
+  // Sort client-side to avoid needing a Firestore index
+  return onSnapshot(collection(db, 'users', uid, 'journalEntries'), (snap) => {
+    const entries = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as JournalEntry))
+      .sort((a, b) => b.date.localeCompare(a.date))
+    cb(entries)
   })
 }
 
