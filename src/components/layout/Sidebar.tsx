@@ -23,7 +23,7 @@ export function Sidebar() {
           <span className="text-xl">✨</span>
         </div>
         <div>
-          <h1 className="font-black text-slate-900 dark:text-white leading-tight">myTracker</h1>
+          <h1 className="font-black text-slate-900 dark:text-white leading-tight">Jabit</h1>
           <p className="text-xs text-slate-400">hábitos & diário</p>
         </div>
       </div>
