@@ -12,7 +12,6 @@ import { useJournal } from '../hooks/useJournal'
 import { useAchievements } from '../hooks/useAchievements'
 import { HabitCard } from '../components/habits/HabitCard'
 import { HabitForm } from '../components/habits/HabitForm'
-import { HabitHeatmap } from '../components/habits/HabitHeatmap'
 import { ProgressRing } from '../components/ui/ProgressRing'
 import { AchievementCard } from '../components/achievements/AchievementCard'
 import { ACHIEVEMENTS } from '../lib/achievements'
@@ -174,7 +173,7 @@ export function DashboardPage() {
             <p className="text-sm text-slate-400 mt-1">Clique em + para criar seu primeiro hábito</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {todayHabits.map((habit) => (
               <HabitCard
                 key={habit.id}
@@ -186,8 +185,6 @@ export function DashboardPage() {
             ))}
           </div>
         )}
-
-        <HabitHeatmap habits={todayHabits} allLogs={allLogs} />
       </motion.section>
 
       {/* Journal shortcut */}
