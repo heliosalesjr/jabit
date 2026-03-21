@@ -26,6 +26,7 @@ ui-debug.log
 
 # Sensitive docs
 SETUP.md
+PROJECT.md
 
 # Editor directories and files
 .vscode/*
