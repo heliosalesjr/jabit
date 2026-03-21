@@ -70,6 +70,21 @@ export interface AchievementDef {
   condition: (stats: UserStats) => boolean
 }
 
+export interface TodoItem {
+  id: string
+  text: string
+  done: boolean
+}
+
+export interface TodoList {
+  id: string
+  name: string
+  starred: boolean
+  archivedAt: Timestamp | null
+  createdAt: Timestamp
+  items: TodoItem[]
+}
+
 export interface UserStats {
   currentStreak: number
   longestStreak: number

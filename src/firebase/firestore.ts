@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement } from '../types'
+import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem } from '../types'
 import { getTodayISO } from '../lib/streaks'
 
 // ─── User Profile ────────────────────────────────────────────────
@@ -178,4 +178,64 @@ export async function unlockAchievements(
 
 export async function markAchievementSeen(uid: string, achievementId: string) {
   await updateDoc(doc(db, 'users', uid, 'achievements', achievementId), { seen: true })
+}
+
+// ─── Todo Lists ───────────────────────────────────────────────────
+export function subscribeTodoLists(uid: string, cb: (lists: TodoList[]) => void) {
+  return onSnapshot(collection(db, 'users', uid, 'todoLists'), (snap) => {
+    const lists = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as TodoList))
+      .filter((l) => !l.archivedAt)
+      .sort((a, b) => {
+        // Starred first, then by createdAt desc
+        if (a.starred && !b.starred) return -1
+        if (!a.starred && b.starred) return 1
+        const aTime = a.createdAt?.toMillis?.() ?? 0
+        const bTime = b.createdAt?.toMillis?.() ?? 0
+        return bTime - aTime
+      })
+    cb(lists)
+  })
+}
+
+export async function createTodoList(uid: string, name: string): Promise<string> {
+  const ref = await addDoc(collection(db, 'users', uid, 'todoLists'), {
+    name,
+    starred: false,
+    archivedAt: null,
+    items: [],
+    createdAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateTodoListItems(uid: string, listId: string, items: TodoItem[]) {
+  await updateDoc(doc(db, 'users', uid, 'todoLists', listId), { items })
+}
+
+export async function renameTodoList(uid: string, listId: string, name: string) {
+  await updateDoc(doc(db, 'users', uid, 'todoLists', listId), { name })
+}
+
+export async function starTodoList(uid: string, listId: string, allListIds: string[]) {
+  const batch = writeBatch(db)
+  for (const id of allListIds) {
+    batch.update(doc(db, 'users', uid, 'todoLists', id), { starred: id === listId })
+  }
+  await batch.commit()
+}
+
+export async function unstarTodoList(uid: string, listId: string) {
+  await updateDoc(doc(db, 'users', uid, 'todoLists', listId), { starred: false })
+}
+
+export async function archiveTodoList(uid: string, listId: string) {
+  await updateDoc(doc(db, 'users', uid, 'todoLists', listId), {
+    archivedAt: Timestamp.now(),
+    starred: false,
+  })
+}
+
+export async function deleteTodoList(uid: string, listId: string) {
+  await deleteDoc(doc(db, 'users', uid, 'todoLists', listId))
 }

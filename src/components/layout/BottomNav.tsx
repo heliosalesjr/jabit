@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Target, BookOpen, Trophy } from 'lucide-react'
+import { LayoutDashboard, Target, BookOpen, Trophy, CheckSquare } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Hoje' },
   { to: '/habits', icon: Target, label: 'Hábitos' },
+  { to: '/todos', icon: CheckSquare, label: 'To-dos' },
   { to: '/journal', icon: BookOpen, label: 'Diário' },
   { to: '/achievements', icon: Trophy, label: 'Conquistas' },
 ]

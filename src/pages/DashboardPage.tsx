@@ -10,14 +10,15 @@ import { useHabits } from '../hooks/useHabits'
 import { useHabitLogs } from '../hooks/useHabitLogs'
 import { useJournal } from '../hooks/useJournal'
 import { useAchievements } from '../hooks/useAchievements'
+import { useTodoLists } from '../hooks/useTodoLists'
 import { HabitCard } from '../components/habits/HabitCard'
 import { HabitForm } from '../components/habits/HabitForm'
-import { ProgressRing } from '../components/ui/ProgressRing'
+import { TodoListBlock } from '../components/todos/TodoListBlock'
 import { AchievementCard } from '../components/achievements/AchievementCard'
 import { ACHIEVEMENTS } from '../lib/achievements'
-import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile } from '../firebase/firestore'
+import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, updateTodoListItems, createTodoList } from '../firebase/firestore'
 import { calculateStreak, getTodayISO, isHabitScheduledForDay } from '../lib/streaks'
-import type { HabitLog, UserStats, UserProfile } from '../types'
+import type { HabitLog, UserStats, UserProfile, TodoItem } from '../types'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -48,10 +49,11 @@ export function DashboardPage() {
     return subscribeUserProfile(user.uid, setProfile)
   }, [user])
 
+  const { lists: todoLists } = useTodoLists()
+  const featuredList = todoLists.find((l) => l.starred) ?? todoLists[0] ?? null
+
   const todayHabits = habits.filter((h) => isHabitScheduledForDay(h.frequency, h.customDays))
   const completedToday = logs.filter((l) => l.date === today)
-  const completionPercent =
-    todayHabits.length > 0 ? (completedToday.length / todayHabits.length) * 100 : 0
 
   const { current: currentStreak } = calculateStreak(allLogs)
 
@@ -149,14 +151,11 @@ export function DashboardPage() {
         className="mb-8"
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <ProgressRing percent={completionPercent} size={56} strokeWidth={5} />
-            <div>
-              <h2 className="font-bold text-slate-900 dark:text-white">Hábitos de hoje</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {completedToday.length}/{todayHabits.length} concluídos
-              </p>
-            </div>
+          <div>
+            <h2 className="font-bold text-slate-900 dark:text-white">Hábitos de hoje</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {completedToday.length}/{todayHabits.length} concluídos
+            </p>
           </div>
           <button
             onClick={() => setShowHabitForm(true)}
@@ -184,6 +183,48 @@ export function DashboardPage() {
               />
             ))}
           </div>
+        )}
+      </motion.section>
+
+      {/* Todo list block */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mb-8"
+      >
+        {featuredList ? (
+          <TodoListBlock
+            list={featuredList}
+            onToggleItem={async (itemId) => {
+              if (!user) return
+              const updated = featuredList.items.map((i) =>
+                i.id === itemId ? { ...i, done: !i.done } : i
+              )
+              await updateTodoListItems(user.uid, featuredList.id, updated)
+            }}
+            onAddItem={async (text) => {
+              if (!user) return
+              const newItem: TodoItem = { id: Math.random().toString(36).slice(2, 10), text, done: false }
+              await updateTodoListItems(user.uid, featuredList.id, [...featuredList.items, newItem])
+            }}
+          />
+        ) : (
+          <button
+            onClick={async () => {
+              if (!user) return
+              await createTodoList(user.uid, 'Minha lista')
+            }}
+            className="w-full card p-4 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
+          >
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl flex-shrink-0">
+              ✅
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Criar lista de tarefas</p>
+              <p className="text-xs text-slate-400">Clique para começar</p>
+            </div>
+          </button>
         )}
       </motion.section>
 

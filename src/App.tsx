@@ -6,6 +6,7 @@ import { AppLayout } from './components/layout/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { HabitsPage } from './pages/HabitsPage'
+import { TodosPage } from './pages/TodosPage'
 import { JournalPage } from './pages/JournalPage'
 import { AchievementsPage } from './pages/AchievementsPage'
 
@@ -64,6 +65,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <HabitsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/todos"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <TodosPage />
             </AppLayout>
           </ProtectedRoute>
         }
