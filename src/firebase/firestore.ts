@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem } from '../types'
+import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor } from '../types'
 import { getTodayISO } from '../lib/streaks'
 
 // ─── User Profile ────────────────────────────────────────────────
@@ -238,4 +238,58 @@ export async function archiveTodoList(uid: string, listId: string) {
 
 export async function deleteTodoList(uid: string, listId: string) {
   await deleteDoc(doc(db, 'users', uid, 'todoLists', listId))
+}
+
+// ─── Quick Notes ──────────────────────────────────────────────────
+export function subscribeQuickNotes(uid: string, cb: (notes: QuickNote[]) => void) {
+  return onSnapshot(collection(db, 'users', uid, 'quickNotes'), (snap) => {
+    const notes = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as QuickNote))
+      .sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1
+        if (!a.pinned && b.pinned) return 1
+        const at = a.updatedAt?.toMillis?.() ?? 0
+        const bt = b.updatedAt?.toMillis?.() ?? 0
+        return bt - at
+      })
+    cb(notes)
+  })
+}
+
+export async function createQuickNote(uid: string, color: NoteColor = 'yellow'): Promise<string> {
+  const ref = await addDoc(collection(db, 'users', uid, 'quickNotes'), {
+    content: '',
+    color,
+    pinned: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateQuickNote(uid: string, noteId: string, content: string) {
+  await updateDoc(doc(db, 'users', uid, 'quickNotes', noteId), {
+    content,
+    updatedAt: Timestamp.now(),
+  })
+}
+
+export async function updateQuickNoteColor(uid: string, noteId: string, color: NoteColor) {
+  await updateDoc(doc(db, 'users', uid, 'quickNotes', noteId), { color })
+}
+
+export async function pinQuickNote(uid: string, noteId: string, allNoteIds: string[]) {
+  const batch = writeBatch(db)
+  for (const id of allNoteIds) {
+    batch.update(doc(db, 'users', uid, 'quickNotes', id), { pinned: id === noteId })
+  }
+  await batch.commit()
+}
+
+export async function unpinQuickNote(uid: string, noteId: string) {
+  await updateDoc(doc(db, 'users', uid, 'quickNotes', noteId), { pinned: false })
+}
+
+export async function deleteQuickNote(uid: string, noteId: string) {
+  await deleteDoc(doc(db, 'users', uid, 'quickNotes', noteId))
 }

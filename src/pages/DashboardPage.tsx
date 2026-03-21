@@ -11,9 +11,11 @@ import { useHabitLogs } from '../hooks/useHabitLogs'
 import { useJournal } from '../hooks/useJournal'
 import { useAchievements } from '../hooks/useAchievements'
 import { useTodoLists } from '../hooks/useTodoLists'
+import { useQuickNotes } from '../hooks/useQuickNotes'
 import { HabitCard } from '../components/habits/HabitCard'
 import { HabitForm } from '../components/habits/HabitForm'
 import { TodoListBlock } from '../components/todos/TodoListBlock'
+import { QuickNoteBlock } from '../components/notes/QuickNoteBlock'
 import { AchievementCard } from '../components/achievements/AchievementCard'
 import { ACHIEVEMENTS } from '../lib/achievements'
 import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, updateTodoListItems, createTodoList } from '../firebase/firestore'
@@ -50,7 +52,9 @@ export function DashboardPage() {
   }, [user])
 
   const { lists: todoLists } = useTodoLists()
+  const { notes } = useQuickNotes()
   const featuredList = todoLists.find((l) => l.starred) ?? todoLists[0] ?? null
+  const featuredNote = notes.find((n) => n.pinned) ?? notes[0] ?? null
 
   const todayHabits = habits.filter((h) => isHabitScheduledForDay(h.frequency, h.customDays))
   const completedToday = logs.filter((l) => l.date === today)
@@ -186,13 +190,14 @@ export function DashboardPage() {
         )}
       </motion.section>
 
-      {/* Todo list block */}
+      {/* Todo + Notes grid */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mb-8"
+        className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
+        {/* To-do block */}
         {featuredList ? (
           <TodoListBlock
             list={featuredList}
@@ -211,17 +216,28 @@ export function DashboardPage() {
           />
         ) : (
           <button
-            onClick={async () => {
-              if (!user) return
-              await createTodoList(user.uid, 'Minha lista')
-            }}
-            className="w-full card p-4 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
+            onClick={async () => { if (user) await createTodoList(user.uid, 'Minha lista') }}
+            className="card p-4 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
           >
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl flex-shrink-0">
-              ✅
-            </div>
+            <span className="text-2xl">✅</span>
             <div>
               <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Criar lista de tarefas</p>
+              <p className="text-xs text-slate-400">Clique para começar</p>
+            </div>
+          </button>
+        )}
+
+        {/* Note block */}
+        {featuredNote && user ? (
+          <QuickNoteBlock note={featuredNote} uid={user.uid} />
+        ) : (
+          <button
+            onClick={async () => { if (user) { const { createQuickNote: create } = await import('../firebase/firestore'); await create(user.uid, 'yellow') } }}
+            className="card p-4 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
+          >
+            <span className="text-2xl">📝</span>
+            <div>
+              <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Criar nota rápida</p>
               <p className="text-xs text-slate-400">Clique para começar</p>
             </div>
           </button>

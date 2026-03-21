@@ -70,6 +70,17 @@ export interface AchievementDef {
   condition: (stats: UserStats) => boolean
 }
 
+export type NoteColor = 'yellow' | 'pink' | 'sky' | 'emerald' | 'violet' | 'orange'
+
+export interface QuickNote {
+  id: string
+  content: string // max 280 chars
+  color: NoteColor
+  pinned: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
 export interface TodoItem {
   id: string
   text: string
