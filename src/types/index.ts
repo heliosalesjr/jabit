@@ -77,6 +77,7 @@ export interface QuickNote {
   content: string // max 280 chars
   color: NoteColor
   pinned: boolean
+  archivedAt: Timestamp | null
   createdAt: Timestamp
   updatedAt: Timestamp
 }

@@ -5,7 +5,7 @@ import { cn } from '../../lib/cn'
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Hoje' },
   { to: '/habits', icon: Target, label: 'Hábitos' },
-  { to: '/todos', icon: CheckSquare, label: 'To-dos' },
+  { to: '/todos', icon: CheckSquare, label: 'Notas' },
   { to: '/journal', icon: BookOpen, label: 'Diário' },
   { to: '/achievements', icon: Trophy, label: 'Conquistas' },
 ]

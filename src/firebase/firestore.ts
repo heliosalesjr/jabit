@@ -245,6 +245,7 @@ export function subscribeQuickNotes(uid: string, cb: (notes: QuickNote[]) => voi
   return onSnapshot(collection(db, 'users', uid, 'quickNotes'), (snap) => {
     const notes = snap.docs
       .map((d) => ({ id: d.id, ...d.data() } as QuickNote))
+      .filter((n) => !n.archivedAt)
       .sort((a, b) => {
         if (a.pinned && !b.pinned) return -1
         if (!a.pinned && b.pinned) return 1
@@ -261,10 +262,18 @@ export async function createQuickNote(uid: string, color: NoteColor = 'yellow'):
     content: '',
     color,
     pinned: false,
+    archivedAt: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
   return ref.id
+}
+
+export async function archiveQuickNote(uid: string, noteId: string) {
+  await updateDoc(doc(db, 'users', uid, 'quickNotes', noteId), {
+    archivedAt: Timestamp.now(),
+    pinned: false,
+  })
 }
 
 export async function updateQuickNote(uid: string, noteId: string, content: string) {

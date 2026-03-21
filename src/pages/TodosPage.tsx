@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Star, Archive, Trash2, Pencil, Check, X, Pin } from 'lucide-react'
+import { Plus, Star, Archive, Trash2, Pencil, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useTodoLists } from '../hooks/useTodoLists'
@@ -9,7 +9,7 @@ import {
   createTodoList, updateTodoListItems, renameTodoList,
   starTodoList, unstarTodoList, archiveTodoList, deleteTodoList,
   createQuickNote, updateQuickNote, updateQuickNoteColor,
-  pinQuickNote, unpinQuickNote, deleteQuickNote,
+  pinQuickNote, unpinQuickNote, archiveQuickNote, deleteQuickNote,
 } from '../firebase/firestore'
 import { cn } from '../lib/cn'
 import type { TodoList, TodoItem, QuickNote, NoteColor } from '../types'
@@ -59,19 +59,26 @@ function NoteCard({ note, allNoteIds }: { note: QuickNote; allNoteIds: string[] 
     save(val)
   }
 
-  const handlePin = async () => {
+  const handleStar = async () => {
     if (!user) return
     if (note.pinned) {
       await unpinQuickNote(user.uid, note.id)
     } else {
       await pinQuickNote(user.uid, note.id, allNoteIds)
-      toast('Nota aparecerá no dashboard 📌', { icon: '📌' })
+      toast('Nota aparecerá no dashboard ⭐')
     }
   }
 
+  const handleArchive = async () => {
+    if (!user) return
+    await archiveQuickNote(user.uid, note.id)
+    toast.success('Nota arquivada')
+  }
+
   const handleDelete = async () => {
-    if (!user || !confirm('Deletar esta nota?')) return
+    if (!user || !confirm('Deletar esta nota permanentemente?')) return
     await deleteQuickNote(user.uid, note.id)
+    toast.success('Nota deletada')
   }
 
   const handleColor = async (color: NoteColor) => {
@@ -88,38 +95,49 @@ function NoteCard({ note, allNoteIds }: { note: QuickNote; allNoteIds: string[] 
         note.pinned && 'ring-2 ring-amber-400 dark:ring-amber-500'
       )}
     >
-      {/* Actions row */}
-      <div className="flex items-center justify-between">
-        {/* Color picker */}
-        <div className="flex gap-1.5">
-          {NOTE_COLOR_OPTIONS.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => handleColor(c.value)}
-              className={cn(
-                'w-4 h-4 rounded-full transition-all hover:scale-110',
-                c.bg,
-                note.color === c.value && `ring-2 ring-offset-1 ${c.ring} scale-110`
-              )}
-            />
-          ))}
+      {/* Header row — same pattern as TodoListCard */}
+      <div className="flex items-center gap-2">
+        {/* Color picker + star indicator */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          {note.pinned && <Star size={13} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
+          <div className="flex gap-1.5">
+            {NOTE_COLOR_OPTIONS.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => handleColor(c.value)}
+                className={cn(
+                  'w-4 h-4 rounded-full transition-all hover:scale-110',
+                  c.bg,
+                  note.color === c.value && `ring-2 ring-offset-1 ${c.ring} scale-110`
+                )}
+              />
+            ))}
+          </div>
         </div>
-        {/* Pin + delete */}
-        <div className="flex items-center gap-1">
+        {/* Star + Archive + Delete */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
-            onClick={handlePin}
-            title={note.pinned ? 'Desafixar do dashboard' : 'Fixar no dashboard'}
+            onClick={handleStar}
+            title={note.pinned ? 'Remover do dashboard' : 'Mostrar no dashboard'}
             className={cn('p-1.5 rounded-lg transition-all',
-              note.pinned ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400'
+              note.pinned ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600 hover:text-amber-400'
             )}
           >
-            <Pin size={13} className={note.pinned ? 'fill-amber-400' : ''} />
+            <Star size={15} className={note.pinned ? 'fill-amber-400' : ''} />
+          </button>
+          <button
+            onClick={handleArchive}
+            title="Arquivar nota"
+            className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-slate-500 transition-all"
+          >
+            <Archive size={15} />
           </button>
           <button
             onClick={handleDelete}
+            title="Deletar nota"
             className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-400 transition-all"
           >
-            <Trash2 size={13} />
+            <Trash2 size={15} />
           </button>
         </div>
       </div>

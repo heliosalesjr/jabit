@@ -8,7 +8,7 @@ import { ThemeToggle } from './ThemeToggle'
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/habits', icon: Target, label: 'Hábitos' },
-  { to: '/todos', icon: CheckSquare, label: 'To-dos' },
+  { to: '/todos', icon: CheckSquare, label: 'Notas Rápidas' },
   { to: '/journal', icon: BookOpen, label: 'Diário' },
   { to: '/achievements', icon: Trophy, label: 'Conquistas' },
 ]
