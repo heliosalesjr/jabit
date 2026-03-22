@@ -126,26 +126,25 @@ export function subscribeJournalEntries(uid: string, cb: (entries: JournalEntry[
 export async function upsertJournalEntry(
   uid: string,
   date: string,
-  data: Partial<JournalEntry>
+  data: Partial<JournalEntry>,
+  existingId?: string
 ): Promise<string> {
-  const q = query(collection(db, 'users', uid, 'journalEntries'), where('date', '==', date))
-  const snap = await getDocs(q)
-
-  if (!snap.empty) {
-    const id = snap.docs[0].id
-    await updateDoc(doc(db, 'users', uid, 'journalEntries', id), {
+  if (existingId) {
+    await updateDoc(doc(db, 'users', uid, 'journalEntries', existingId), {
       ...data,
       updatedAt: serverTimestamp(),
     })
-    return id
+    return existingId
   } else {
-    const ref = await addDoc(collection(db, 'users', uid, 'journalEntries'), {
+    // Use date as document ID for reliable upsert without requiring a query index
+    const docRef = doc(db, 'users', uid, 'journalEntries', date)
+    await setDoc(docRef, {
       ...data,
       date,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
-    return ref.id
+    return date
   }
 }
 

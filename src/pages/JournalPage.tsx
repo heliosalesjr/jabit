@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Sparkles, ChevronDown, ChevronUp, PenLine, BookOpen, Search } from 'lucide-react'
+import { Sparkles, ChevronDown, ChevronUp, PenLine, BookOpen, Search, Pencil, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useJournal } from '../hooks/useJournal'
@@ -100,6 +100,7 @@ export function JournalPage() {
   const [content, setContent] = useState('')
   const [mood, setMood] = useState<1 | 2 | 3 | 4 | 5 | undefined>(undefined)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [search, setSearch] = useState('')
 
   // Track if Firestore data has been loaded into the form yet
@@ -108,11 +109,11 @@ export function JournalPage() {
   useEffect(() => {
     if (loading) return
     if (!initializedRef.current) {
-      // First load — populate from existing entry if it exists
       initializedRef.current = true
       if (todayEntry) {
         setContent(todayEntry.content ?? '')
         setMood(todayEntry.mood)
+        setSaved(true)
       }
     }
   }, [loading, todayEntry])
@@ -124,10 +125,12 @@ export function JournalPage() {
       await upsertJournalEntry(user.uid, today, {
         promptQuestion: prompt,
         content: content.trim(),
-        mood,
-      })
+        ...(mood !== undefined && { mood }),
+      }, todayEntry?.id)
       toast.success(todayEntry ? 'Entrada atualizada! ✅' : 'Entrada salva! ✨')
-    } catch {
+      setSaved(true)
+    } catch (err) {
+      console.error('Journal save error:', err)
       toast.error('Erro ao salvar entrada')
     } finally {
       setSaving(false)
@@ -203,72 +206,132 @@ export function JournalPage() {
             exit={{ opacity: 0, x: 10 }}
             transition={{ duration: 0.15 }}
           >
-            {/* Prompt */}
-            <div className="relative mb-5 rounded-3xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500" />
-              <div className="relative p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} className="text-white/80" />
-                  <span className="text-white/80 text-xs font-semibold uppercase tracking-wide">
-                    Pergunta do dia
-                  </span>
-                </div>
-                <p className="text-white text-base font-semibold leading-snug">{prompt}</p>
-              </div>
-            </div>
-
-            {/* Mood selector */}
-            <div className="card p-4 mb-4">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                Como você está hoje?
-              </p>
-              <div className="flex justify-between">
-                {MOODS.map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => setMood(mood === m.value ? undefined : m.value)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                      mood === m.value
-                        ? 'bg-violet-100 dark:bg-violet-900/40 scale-110'
-                        : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="text-2xl">{m.emoji}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{m.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Textarea */}
-            <div className="mb-4">
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Escreva o que quiser... sem julgamentos 💭"
-                rows={9}
-                className="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all resize-none leading-relaxed text-sm"
-              />
-              <div className="flex items-center justify-between mt-2 px-1">
-                <span className="text-xs text-slate-400">{content.length} caracteres</span>
-                <button
-                  onClick={save}
-                  disabled={!content.trim() || saving}
-                  className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            <AnimatePresence mode="wait">
+              {saved ? (
+                /* ── SAVED / READ-ONLY VIEW ── */
+                <motion.div
+                  key="saved-view"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  {saving ? 'Salvando...' : todayEntry ? '💾 Atualizar' : '✨ Salvar'}
-                </button>
-              </div>
-            </div>
+                  {/* Success banner */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2 text-emerald-500">
+                      <CheckCircle2 size={18} />
+                      <span className="text-sm font-semibold">Entrada de hoje salva</span>
+                    </div>
+                    <button
+                      onClick={() => setSaved(false)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
+                    >
+                      <Pencil size={13} />
+                      Editar
+                    </button>
+                  </div>
 
-            {todayEntry && (
-              <div className="text-center py-2">
-                <span className="text-xs text-emerald-500 font-medium flex items-center justify-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                  Entrada de hoje salva
-                </span>
-              </div>
-            )}
+                  {/* Mood display */}
+                  {mood !== undefined && (
+                    <div className="flex items-center gap-3 card px-4 py-3 mb-4">
+                      <span className="text-3xl">{MOODS.find((m) => m.value === mood)?.emoji}</span>
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Humor de hoje</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                          {MOODS.find((m) => m.value === mood)?.label}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prompt */}
+                  <div className="flex items-start gap-2 mb-3 px-1">
+                    <Sparkles size={13} className="text-violet-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs font-medium text-violet-500 dark:text-violet-400 italic leading-relaxed">
+                      {prompt}
+                    </p>
+                  </div>
+
+                  {/* Content card */}
+                  <div className="card px-5 py-4">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                      {content}
+                    </p>
+                  </div>
+
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
+                    {content.length} caracteres
+                  </p>
+                </motion.div>
+              ) : (
+                /* ── EDIT / WRITE VIEW ── */
+                <motion.div
+                  key="edit-view"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* Prompt */}
+                  <div className="relative mb-5 rounded-3xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500" />
+                    <div className="relative p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles size={14} className="text-white/80" />
+                        <span className="text-white/80 text-xs font-semibold uppercase tracking-wide">
+                          Pergunta do dia
+                        </span>
+                      </div>
+                      <p className="text-white text-base font-semibold leading-snug">{prompt}</p>
+                    </div>
+                  </div>
+
+                  {/* Mood selector */}
+                  <div className="card p-4 mb-4">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                      Como você está hoje?
+                    </p>
+                    <div className="flex justify-between">
+                      {MOODS.map((m) => (
+                        <button
+                          key={m.value}
+                          onClick={() => setMood(mood === m.value ? undefined : m.value)}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                            mood === m.value
+                              ? 'bg-violet-100 dark:bg-violet-900/40 scale-110'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="text-2xl">{m.emoji}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">{m.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Textarea */}
+                  <div className="mb-4">
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Escreva o que quiser... sem julgamentos 💭"
+                      rows={9}
+                      className="w-full px-5 py-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all resize-none leading-relaxed text-sm"
+                    />
+                    <div className="flex items-center justify-between mt-2 px-1">
+                      <span className="text-xs text-slate-400">{content.length} caracteres</span>
+                      <button
+                        onClick={save}
+                        disabled={!content.trim() || saving}
+                        className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {saving ? 'Salvando...' : todayEntry ? '💾 Atualizar' : '✨ Salvar'}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
