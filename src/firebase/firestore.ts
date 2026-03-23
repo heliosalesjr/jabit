@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor, FriendRequest, Friendship, PendingInvite } from '../types'
+import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor, FriendRequest, Friendship, PendingInvite, HabitPartnership } from '../types'
 import { getTodayISO } from '../lib/streaks'
 
 // ─── User Profile ────────────────────────────────────────────────
@@ -421,5 +421,103 @@ export async function checkAndProcessPendingInvite(uid: string, email: string): 
   const batch = writeBatch(db)
   batch.set(friendshipRef, { users: [invite.fromUid, uid], createdAt: serverTimestamp() })
   batch.delete(inviteRef)
+  await batch.commit()
+}
+
+// ─── Habit Partnerships ───────────────────────────────────────────
+
+export async function shareHabit(
+  owner: { uid: string; displayName: string; photoURL: string },
+  habit: Habit,
+  partner: { uid: string; displayName: string; photoURL: string }
+): Promise<void> {
+  const partnershipRef = doc(collection(db, 'habitPartnerships'))
+  const batch = writeBatch(db)
+
+  batch.set(partnershipRef, {
+    ownerUid: owner.uid,
+    ownerName: owner.displayName,
+    ownerPhoto: owner.photoURL,
+    ownerHabitId: habit.id,
+    ownerHabitName: habit.name,
+    ownerHabitEmoji: habit.emoji,
+    ownerHabitColor: habit.color,
+    ownerHabitFrequency: habit.frequency,
+    ownerHabitTargetCount: habit.targetCount,
+    ...(habit.customDays ? { ownerHabitCustomDays: habit.customDays } : {}),
+    partnerUid: partner.uid,
+    partnerName: partner.displayName,
+    partnerPhoto: partner.photoURL,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+  })
+
+  // Mark the owner's habit as shared
+  batch.update(doc(db, 'users', owner.uid, 'habits', habit.id), {
+    partnershipId: partnershipRef.id,
+  })
+
+  await batch.commit()
+}
+
+export function subscribeHabitPartnershipsByOwner(
+  uid: string,
+  cb: (partnerships: HabitPartnership[]) => void
+) {
+  const q = query(collection(db, 'habitPartnerships'), where('ownerUid', '==', uid))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as HabitPartnership)))
+  })
+}
+
+export function subscribeHabitPartnershipsByPartner(
+  uid: string,
+  cb: (partnerships: HabitPartnership[]) => void
+) {
+  const q = query(collection(db, 'habitPartnerships'), where('partnerUid', '==', uid))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as HabitPartnership)))
+  })
+}
+
+export async function acceptHabitPartnership(
+  partnership: HabitPartnership,
+  partnerUid: string
+): Promise<void> {
+  const newHabitRef = doc(collection(db, 'users', partnerUid, 'habits'))
+  const batch = writeBatch(db)
+
+  batch.set(newHabitRef, {
+    name: partnership.ownerHabitName,
+    emoji: partnership.ownerHabitEmoji,
+    color: partnership.ownerHabitColor,
+    frequency: partnership.ownerHabitFrequency,
+    targetCount: partnership.ownerHabitTargetCount,
+    ...(partnership.ownerHabitCustomDays ? { customDays: partnership.ownerHabitCustomDays } : {}),
+    order: Date.now(),
+    partnershipId: partnership.id,
+    createdAt: serverTimestamp(),
+  })
+
+  batch.update(doc(db, 'habitPartnerships', partnership.id), {
+    status: 'accepted',
+    partnerHabitId: newHabitRef.id,
+  })
+
+  await batch.commit()
+}
+
+export async function rejectHabitPartnership(partnershipId: string): Promise<void> {
+  await updateDoc(doc(db, 'habitPartnerships', partnershipId), { status: 'rejected' })
+}
+
+export async function cancelHabitPartnership(
+  partnershipId: string,
+  ownerUid: string,
+  habitId: string
+): Promise<void> {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'habitPartnerships', partnershipId))
+  batch.update(doc(db, 'users', ownerUid, 'habits', habitId), { partnershipId: null })
   await batch.commit()
 }

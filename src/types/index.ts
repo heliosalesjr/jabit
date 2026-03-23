@@ -34,6 +34,27 @@ export interface Habit {
   order: number
   archivedAt?: Timestamp
   createdAt: Timestamp
+  partnershipId?: string
+}
+
+export interface HabitPartnership {
+  id: string
+  ownerUid: string
+  ownerName: string
+  ownerPhoto: string
+  ownerHabitId: string
+  ownerHabitName: string
+  ownerHabitEmoji: string
+  ownerHabitColor: HabitColor
+  ownerHabitFrequency: 'daily' | 'weekdays' | 'weekends' | 'custom'
+  ownerHabitTargetCount: number
+  ownerHabitCustomDays?: number[]
+  partnerUid: string
+  partnerName: string
+  partnerPhoto: string
+  partnerHabitId?: string
+  status: 'pending' | 'accepted' | 'rejected'
+  createdAt: Timestamp
 }
 
 export interface HabitLog {
