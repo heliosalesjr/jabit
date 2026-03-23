@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { UserPlus, Check, X, Clock, Users, Mail, UserMinus, Send } from 'lucide-react'
+import { UserPlus, Check, X, Clock, Users, Mail, UserMinus, Send, Copy, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useFriends } from '../hooks/useFriends'
@@ -159,6 +159,100 @@ function FriendCard({ profile, friendship, onRemove }: {
   )
 }
 
+// ─── Invite Modal ─────────────────────────────────────────────────
+
+const APP_URL = 'https://jabit.vercel.app'
+
+function InviteModal({
+  toEmail,
+  fromName,
+  onClose,
+}: {
+  toEmail: string
+  fromName: string
+  onClose: () => void
+}) {
+  const message = `Oi! Eu uso o Jabit para acompanhar meus hábitos e queria te convidar para usarmos juntos. Entre com sua conta Google em ${APP_URL} e a gente já fica conectado automaticamente! 🎯`
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+      >
+        {/* Header */}
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+              <Mail size={16} className="text-amber-500" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white text-sm">Pessoa ainda não tem conta</p>
+              <p className="text-xs text-slate-400 truncate">{toEmail}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            Quando ela entrar no Jabit com essa conta Google, vocês serão <span className="font-semibold text-violet-500">conectados automaticamente</span>. Enquanto isso, mande o convite abaixo:
+          </p>
+
+          {/* Message preview */}
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4">
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              {message}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopy}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                copied
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 hover:bg-violet-200 dark:hover:bg-violet-900/50'
+              }`}
+            >
+              <Copy size={14} />
+              {copied ? 'Copiado!' : 'Copiar mensagem'}
+            </button>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all"
+            >
+              <ExternalLink size={14} />
+              WhatsApp
+            </a>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2 text-sm text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────
 
 export function FriendsPage() {
@@ -166,6 +260,7 @@ export function FriendsPage() {
   const { incoming, outgoing, friendships, friendProfiles, loading } = useFriends()
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null)
 
   const handleAdd = async () => {
     if (!user || !email.trim()) return
@@ -185,7 +280,7 @@ export function FriendsPage() {
         toast.success('Pedido de amizade enviado!')
         setEmail('')
       } else if (result === 'invited') {
-        toast.success('Convite registrado! Quando essa pessoa entrar no Jabit, vocês serão conectados automaticamente.')
+        setInvitedEmail(email.trim())
         setEmail('')
       } else if (result === 'already_sent') {
         toast('Você já enviou um pedido para esse email.', { icon: '⏳' })
@@ -264,7 +359,7 @@ export function FriendsPage() {
           </button>
         </div>
         <p className="text-xs text-slate-400 mt-2">
-          Se a pessoa ainda não tiver conta, receberá uma conexão automática ao entrar no Jabit.
+          Se a pessoa já tiver conta, o pedido chega direto. Se não tiver, vamos te dar uma mensagem para convidar ela.
         </p>
       </motion.div>
 
@@ -363,6 +458,17 @@ export function FriendsPage() {
           </section>
         </div>
       )}
+
+      {/* Invite modal */}
+      <AnimatePresence>
+        {invitedEmail && (
+          <InviteModal
+            toEmail={invitedEmail}
+            fromName={user?.displayName ?? 'Você'}
+            onClose={() => setInvitedEmail(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
