@@ -18,8 +18,9 @@ import { TodoListBlock } from '../components/todos/TodoListBlock'
 import { QuickNoteBlock } from '../components/notes/QuickNoteBlock'
 import { AchievementCard } from '../components/achievements/AchievementCard'
 import { ACHIEVEMENTS } from '../lib/achievements'
-import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, updateTodoListItems, createTodoList } from '../firebase/firestore'
+import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, updateTodoListItems, createTodoList, markPartnershipCheckIn } from '../firebase/firestore'
 import { calculateStreak, getTodayISO, isHabitScheduledForDay } from '../lib/streaks'
+import { useHabitPartnerships } from '../hooks/useHabitPartnerships'
 import type { HabitLog, UserStats, UserProfile, TodoItem } from '../types'
 
 export function DashboardPage() {
@@ -50,6 +51,8 @@ export function DashboardPage() {
     if (!user) return
     return subscribeUserProfile(user.uid, setProfile)
   }, [user])
+
+  const { getPartnershipForHabit, getPartnerInfo } = useHabitPartnerships()
 
   const { lists: todoLists } = useTodoLists()
   const { notes } = useQuickNotes()
@@ -84,7 +87,22 @@ export function DashboardPage() {
     try {
       await toggleHabitLog(user.uid, habitId, currentLog)
       if (!currentLog) {
-        toast('Hábito concluído! 🎉', { icon: '✅' })
+        // Check for active partnership bonus
+        const partnership = getPartnershipForHabit(habitId)
+        if (partnership) {
+          const isOwner = partnership.ownerUid === user.uid
+          const bonusEarned = await markPartnershipCheckIn(user.uid, partnership.id, isOwner, today)
+          if (bonusEarned) {
+            const partner = getPartnerInfo(partnership)
+            toast.success(`Juntos com ${partner.name.split(' ')[0]} hoje! +10 pts bônus 🎉`, {
+              duration: 4000,
+            })
+          } else {
+            toast('Hábito concluído! 🎉', { icon: '✅' })
+          }
+        } else {
+          toast('Hábito concluído! 🎉', { icon: '✅' })
+        }
       }
     } catch {
       toast.error('Erro ao atualizar hábito')

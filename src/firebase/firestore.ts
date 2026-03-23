@@ -14,6 +14,7 @@ import {
   writeBatch,
   serverTimestamp,
   Timestamp,
+  increment,
 } from 'firebase/firestore'
 import { db } from './config'
 import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor, FriendRequest, Friendship, PendingInvite, HabitPartnership } from '../types'
@@ -520,4 +521,37 @@ export async function cancelHabitPartnership(
   batch.delete(doc(db, 'habitPartnerships', partnershipId))
   batch.update(doc(db, 'users', ownerUid, 'habits', habitId), { partnershipId: null })
   await batch.commit()
+}
+
+// Called after a check-in on a shared habit.
+// Marks today's date for the current user and awards bonus if the partner also checked in today.
+// Returns true if bonus was earned (both completed today).
+export async function markPartnershipCheckIn(
+  uid: string,
+  partnershipId: string,
+  isOwner: boolean,
+  today: string
+): Promise<boolean> {
+  const partnershipRef = doc(db, 'habitPartnerships', partnershipId)
+  const snap = await getDoc(partnershipRef)
+  const data = snap.data()
+  if (!data) return false
+
+  const myField = isOwner ? 'ownerLastCheckDate' : 'partnerLastCheckDate'
+  const partnerField = isOwner ? 'partnerLastCheckDate' : 'ownerLastCheckDate'
+
+  // Already marked today — avoid double award
+  if (data[myField] === today) {
+    return data[partnerField] === today
+  }
+
+  await updateDoc(partnershipRef, { [myField]: today })
+
+  if (data[partnerField] === today) {
+    // Partner already checked in — award bonus to current user
+    await updateDoc(doc(db, 'users', uid), { totalPoints: increment(10) })
+    return true
+  }
+
+  return false
 }

@@ -53,6 +53,8 @@ export interface HabitPartnership {
   partnerName: string
   partnerPhoto: string
   partnerHabitId?: string
+  ownerLastCheckDate?: string   // ISO date, updated on each owner check-in
+  partnerLastCheckDate?: string // ISO date, updated on each partner check-in
   status: 'pending' | 'accepted' | 'rejected'
   createdAt: Timestamp
 }
