@@ -42,7 +42,7 @@ function IncomingCard({ request, onAccept, onReject }: {
 }) {
   const [busy, setBusy] = useState(false)
 
-  const handle = async (action: () => Promise<void>) => {
+  const handle = async (action: () => void | Promise<void>) => {
     setBusy(true)
     try { await action() } finally { setBusy(false) }
   }
@@ -112,9 +112,8 @@ function OutgoingCard({ request, onCancel }: {
   )
 }
 
-function FriendCard({ profile, friendship, onRemove }: {
+function FriendCard({ profile, onRemove }: {
   profile: UserProfile
-  friendship: Friendship
   onRemove: () => void
 }) {
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -165,11 +164,9 @@ const APP_URL = 'https://jabit.vercel.app'
 
 function InviteModal({
   toEmail,
-  fromName,
   onClose,
 }: {
   toEmail: string
-  fromName: string
   onClose: () => void
 }) {
   const message = `Oi! Eu uso o Jabit para acompanhar meus hábitos e queria te convidar para usarmos juntos. Entre com sua conta Google em ${APP_URL} e a gente já fica conectado automaticamente! 🎯`
@@ -447,7 +444,6 @@ export function FriendsPage() {
                       <FriendCard
                         key={profile.uid}
                         profile={profile}
-                        friendship={friendship}
                         onRemove={() => handleRemove(friendship)}
                       />
                     )
@@ -464,7 +460,6 @@ export function FriendsPage() {
         {invitedEmail && (
           <InviteModal
             toEmail={invitedEmail}
-            fromName={user?.displayName ?? 'Você'}
             onClose={() => setInvitedEmail(null)}
           />
         )}

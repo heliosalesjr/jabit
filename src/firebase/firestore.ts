@@ -309,7 +309,7 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
   const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase().trim()))
   const snap = await getDocs(q)
   if (snap.empty) return null
-  return { id: snap.docs[0].id, ...snap.docs[0].data() } as UserProfile
+  return snap.docs[0].data() as UserProfile
 }
 
 export async function sendFriendRequest(
