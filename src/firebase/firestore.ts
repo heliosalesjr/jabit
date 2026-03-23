@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor } from '../types'
+import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor, FriendRequest, Friendship, PendingInvite } from '../types'
 import { getTodayISO } from '../lib/streaks'
 
 // ─── User Profile ────────────────────────────────────────────────
@@ -300,4 +300,126 @@ export async function unpinQuickNote(uid: string, noteId: string) {
 
 export async function deleteQuickNote(uid: string, noteId: string) {
   await deleteDoc(doc(db, 'users', uid, 'quickNotes', noteId))
+}
+
+// ─── Friends ─────────────────────────────────────────────────────
+
+export async function findUserByEmail(email: string): Promise<UserProfile | null> {
+  const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase().trim()))
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  return { id: snap.docs[0].id, ...snap.docs[0].data() } as UserProfile
+}
+
+export async function sendFriendRequest(
+  from: { uid: string; displayName: string; photoURL: string; email: string },
+  toEmail: string
+): Promise<'sent' | 'invited' | 'already_sent' | 'self'> {
+  const normalizedEmail = toEmail.toLowerCase().trim()
+  if (normalizedEmail === from.email.toLowerCase()) return 'self'
+
+  // Check for existing outgoing requests to this email
+  const existingQ = query(collection(db, 'friendRequests'), where('fromUid', '==', from.uid))
+  const existingSnap = await getDocs(existingQ)
+  const alreadySent = existingSnap.docs.some(
+    (d) => d.data().toEmail === normalizedEmail && d.data().status === 'pending'
+  )
+  if (alreadySent) return 'already_sent'
+
+  const target = await findUserByEmail(normalizedEmail)
+
+  if (target) {
+    await addDoc(collection(db, 'friendRequests'), {
+      fromUid: from.uid,
+      fromName: from.displayName,
+      fromPhoto: from.photoURL,
+      toEmail: normalizedEmail,
+      toUid: target.uid,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+    })
+    return 'sent'
+  } else {
+    await setDoc(doc(db, 'pendingInvites', normalizedEmail), {
+      fromUid: from.uid,
+      fromName: from.displayName,
+      fromPhoto: from.photoURL,
+      toEmail: normalizedEmail,
+      createdAt: serverTimestamp(),
+    })
+    return 'invited'
+  }
+}
+
+export function subscribeIncomingRequests(uid: string, cb: (requests: FriendRequest[]) => void) {
+  const q = query(collection(db, 'friendRequests'), where('toUid', '==', uid))
+  return onSnapshot(q, (snap) => {
+    cb(
+      snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as FriendRequest))
+        .filter((r) => r.status === 'pending')
+    )
+  })
+}
+
+export function subscribeOutgoingRequests(uid: string, cb: (requests: FriendRequest[]) => void) {
+  const q = query(collection(db, 'friendRequests'), where('fromUid', '==', uid))
+  return onSnapshot(q, (snap) => {
+    cb(
+      snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as FriendRequest))
+        .filter((r) => r.status === 'pending')
+    )
+  })
+}
+
+export async function acceptFriendRequest(
+  requestId: string,
+  fromUid: string,
+  toUid: string
+): Promise<void> {
+  const friendshipRef = doc(collection(db, 'friendships'))
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'friendRequests', requestId), { status: 'accepted' })
+  batch.set(friendshipRef, { users: [fromUid, toUid], createdAt: serverTimestamp() })
+  await batch.commit()
+}
+
+export async function rejectFriendRequest(requestId: string): Promise<void> {
+  await updateDoc(doc(db, 'friendRequests', requestId), { status: 'rejected' })
+}
+
+export async function cancelFriendRequest(requestId: string): Promise<void> {
+  await deleteDoc(doc(db, 'friendRequests', requestId))
+}
+
+export function subscribeFriendships(uid: string, cb: (friendships: Friendship[]) => void) {
+  const q = query(collection(db, 'friendships'), where('users', 'array-contains', uid))
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Friendship)))
+  })
+}
+
+export async function getUserProfiles(uids: string[]): Promise<UserProfile[]> {
+  if (uids.length === 0) return []
+  const profiles = await Promise.all(uids.map((uid) => getUserProfile(uid)))
+  return profiles.filter(Boolean) as UserProfile[]
+}
+
+export async function removeFriend(friendshipId: string): Promise<void> {
+  await deleteDoc(doc(db, 'friendships', friendshipId))
+}
+
+// Called from AuthContext when a new user signs up — converts any pending invite into a friendship
+export async function checkAndProcessPendingInvite(uid: string, email: string): Promise<void> {
+  const inviteRef = doc(db, 'pendingInvites', email.toLowerCase().trim())
+  const inviteSnap = await getDoc(inviteRef)
+  if (!inviteSnap.exists()) return
+
+  const invite = inviteSnap.data() as PendingInvite
+  const friendshipRef = doc(collection(db, 'friendships'))
+  const batch = writeBatch(db)
+  batch.set(friendshipRef, { users: [invite.fromUid, uid], createdAt: serverTimestamp() })
+  batch.delete(inviteRef)
+  await batch.commit()
 }

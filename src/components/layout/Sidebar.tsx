@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Target, BookOpen, Trophy, CheckSquare, LogOut } from 'lucide-react'
+import { LayoutDashboard, Target, BookOpen, Trophy, CheckSquare, LogOut, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../context/AuthContext'
 import { signOut } from '../../firebase/auth'
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/habits', icon: Target, label: 'Hábitos' },
   { to: '/todos', icon: CheckSquare, label: 'Notas Rápidas' },
   { to: '/journal', icon: BookOpen, label: 'Diário' },
+  { to: '/friends', icon: Users, label: 'Amigos' },
   { to: '/achievements', icon: Trophy, label: 'Conquistas' },
 ]
 

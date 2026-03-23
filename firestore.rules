@@ -2,7 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Any authenticated user can read profiles (needed for friend search by email)
+      allow read: if request.auth != null;
+      // Only the owner can write their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
 
       match /habits/{habitId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -22,6 +25,32 @@ service cloud.firestore {
       match /quickNotes/{noteId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Friend requests: sender and recipient can read/update; sender can create/delete
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.fromUid ||
+        request.auth.uid == resource.data.toUid
+      );
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.fromUid;
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.fromUid ||
+        request.auth.uid == resource.data.toUid
+      );
+      allow delete: if request.auth != null && request.auth.uid == resource.data.fromUid;
+    }
+
+    // Friendships: both parties can read; authenticated users can create; either party can delete
+    match /friendships/{friendshipId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.users;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid in resource.data.users;
+    }
+
+    // Pending invites: any authenticated user can read/write (invite by email)
+    match /pendingInvites/{email} {
+      allow read, write: if request.auth != null;
     }
   }
 }

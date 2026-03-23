@@ -105,3 +105,28 @@ export interface UserStats {
   totalPoints: number
   habitsCount: number
 }
+
+export interface FriendRequest {
+  id: string
+  fromUid: string
+  fromName: string
+  fromPhoto: string
+  toEmail: string
+  toUid?: string
+  status: 'pending' | 'accepted' | 'rejected'
+  createdAt: Timestamp
+}
+
+export interface Friendship {
+  id: string
+  users: string[]
+  createdAt: Timestamp
+}
+
+export interface PendingInvite {
+  fromUid: string
+  fromName: string
+  fromPhoto: string
+  toEmail: string
+  createdAt: Timestamp
+}

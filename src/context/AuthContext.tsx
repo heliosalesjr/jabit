@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { auth } from '../firebase/config'
-import { createUserProfile, getUserProfile } from '../firebase/firestore'
+import { createUserProfile, getUserProfile, checkAndProcessPendingInvite } from '../firebase/firestore'
 
 interface AuthContextType {
   user: User | null
@@ -25,6 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: firebaseUser.email ?? '',
             photoURL: firebaseUser.photoURL ?? '',
           })
+          // Convert any pending invite for this email into a friendship
+          if (firebaseUser.email) {
+            await checkAndProcessPendingInvite(firebaseUser.uid, firebaseUser.email)
+          }
         }
         setUser(firebaseUser)
       } else {
