@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import { AppLayout } from './components/layout/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -119,6 +120,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <NotificationsProvider>
         <BrowserRouter>
           <AppRoutes />
           <Toaster
@@ -134,6 +136,7 @@ export default function App() {
             }}
           />
         </BrowserRouter>
+        </NotificationsProvider>
       </AuthProvider>
     </ThemeProvider>
   )
