@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Target, BookOpen, Trophy, Users } from 'lucide-react'
+import { LayoutDashboard, Target, BookOpen, UserCircle, Users } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useNotifications } from '../../context/NotificationsContext'
 
@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { to: '/habits', icon: Target, label: 'Hábitos', badge: 'habits' as const },
   { to: '/journal', icon: BookOpen, label: 'Diário', badge: null },
   { to: '/friends', icon: Users, label: 'Amigos', badge: 'friends' as const },
-  { to: '/achievements', icon: Trophy, label: 'Conquistas', badge: null },
+  { to: '/profile', icon: UserCircle, label: 'Perfil', badge: null },
 ]
 
 export function BottomNav() {

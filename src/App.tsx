@@ -11,6 +11,7 @@ import { TodosPage } from './pages/TodosPage'
 import { JournalPage } from './pages/JournalPage'
 import { AchievementsPage } from './pages/AchievementsPage'
 import { FriendsPage } from './pages/FriendsPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -107,6 +108,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <FriendsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ProfilePage />
             </AppLayout>
           </ProtectedRoute>
         }

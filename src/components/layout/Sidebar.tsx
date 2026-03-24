@@ -1,9 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Target, BookOpen, Trophy, CheckSquare, LogOut, Users } from 'lucide-react'
+import { LayoutDashboard, Target, BookOpen, Trophy, CheckSquare, Users, UserCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationsContext'
-import { signOut } from '../../firebase/auth'
 import { ThemeToggle } from './ThemeToggle'
 
 const NAV_ITEMS = [
@@ -13,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/journal', icon: BookOpen, label: 'Diário', badge: null },
   { to: '/friends', icon: Users, label: 'Amigos', badge: 'friends' as const },
   { to: '/achievements', icon: Trophy, label: 'Conquistas', badge: null },
+  { to: '/profile', icon: UserCircle, label: 'Perfil', badge: null },
 ]
 
 export function Sidebar() {
@@ -75,25 +75,29 @@ export function Sidebar() {
         </div>
 
         {user && (
-          <div className="flex items-center gap-3">
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-2xl p-2 -mx-2 transition-all',
+                isActive
+                  ? 'bg-violet-50 dark:bg-violet-900/20'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              )
+            }
+          >
             <img
               src={user.photoURL ?? ''}
               alt={user.displayName ?? ''}
-              className="w-9 h-9 rounded-full ring-2 ring-violet-200 dark:ring-violet-900"
+              className="w-9 h-9 rounded-full ring-2 ring-violet-200 dark:ring-violet-900 flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                 {user.displayName?.split(' ')[0]}
               </p>
-              <button
-                onClick={() => signOut()}
-                className="text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
-              >
-                <LogOut size={10} />
-                Sair
-              </button>
+              <p className="text-xs text-slate-400">Ver perfil</p>
             </div>
-          </div>
+          </NavLink>
         )}
       </div>
     </aside>
