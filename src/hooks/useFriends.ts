@@ -48,9 +48,16 @@ export function useFriends() {
 
     unsubFriendships = subscribeFriendships(user.uid, (ships) => {
       setFriendships(ships)
-      checkDone()
       const partnerUids = ships.map((s) => s.users.find((u) => u !== user.uid)!)
-      getUserProfiles(partnerUids).then(setFriendProfiles)
+      if (partnerUids.length === 0) {
+        setFriendProfiles([])
+        checkDone()
+      } else {
+        getUserProfiles(partnerUids).then((profiles) => {
+          setFriendProfiles(profiles)
+          checkDone()
+        })
+      }
     })
 
     return () => {

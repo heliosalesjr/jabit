@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Flame, BookOpen, Trophy, Plus, ArrowRight } from 'lucide-react'
+import { Flame, BookOpen, Trophy, Plus, ArrowRight, Check, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
@@ -22,6 +22,88 @@ import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, update
 import { calculateStreak, getTodayISO, isHabitScheduledForDay } from '../lib/streaks'
 import { useHabitPartnerships } from '../hooks/useHabitPartnerships'
 import type { HabitLog, UserStats, UserProfile, TodoItem } from '../types'
+
+// ─── Shared Habit Card ────────────────────────────────────────────
+
+function SharedHabitCard({
+  habit,
+  partnerInfo,
+  partnerCheckedToday,
+  completed,
+  onToggle,
+}: {
+  habit: import('../types').Habit
+  partnerInfo: { name: string; photo: string }
+  partnerCheckedToday: boolean
+  completed: boolean
+  onToggle: () => void
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`card p-4 flex items-center gap-4 transition-all ${
+        completed ? 'ring-2 ring-emerald-300 dark:ring-emerald-700/60' : ''
+      }`}
+    >
+      {/* Emoji + partner avatar overlay */}
+      <div className="relative flex-shrink-0">
+        <div
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${
+            completed
+              ? 'bg-emerald-100 dark:bg-emerald-900/30'
+              : 'bg-slate-100 dark:bg-slate-800'
+          }`}
+        >
+          {habit.emoji}
+        </div>
+        <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full ring-2 ring-white dark:ring-slate-900 overflow-hidden flex-shrink-0">
+          {partnerInfo.photo ? (
+            <img src={partnerInfo.photo} alt={partnerInfo.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-white text-[9px] font-bold">
+              {partnerInfo.name.charAt(0)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className={`font-bold text-sm truncate ${completed ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+          {habit.name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <span className="text-xs text-slate-400">
+            com {partnerInfo.name.split(' ')[0]}
+          </span>
+          {partnerCheckedToday && (
+            <span className="text-xs text-emerald-500 font-medium">· já fez hoje 🎉</span>
+          )}
+        </div>
+      </div>
+
+      {/* Toggle */}
+      <button
+        onClick={onToggle}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
+          completed
+            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-500'
+        }`}
+      >
+        {completed ? (
+          <Check size={18} />
+        ) : (
+          <div className="w-4 h-4 rounded-full border-2 border-current" />
+        )}
+      </button>
+    </motion.div>
+  )
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -52,14 +134,41 @@ export function DashboardPage() {
     return subscribeUserProfile(user.uid, setProfile)
   }, [user])
 
-  const { getPartnershipForHabit, getPartnerInfo } = useHabitPartnerships()
+  const { getPartnershipForHabit, getPartnerInfo, activePartnerships } = useHabitPartnerships()
+
+  const sharedHabitsToday = useMemo(() => {
+    return activePartnerships
+      .map((partnership) => {
+        const isOwner = partnership.ownerUid === user?.uid
+        const habitId = isOwner ? partnership.ownerHabitId : partnership.partnerHabitId
+        if (!habitId) return null
+        const habit = habits.find((h) => h.id === habitId)
+        if (!habit) return null
+        if (!isHabitScheduledForDay(habit.frequency, habit.customDays)) return null
+        const partnerInfo = getPartnerInfo(partnership)
+        const partnerCheckedToday = isOwner
+          ? partnership.partnerLastCheckDate === today
+          : partnership.ownerLastCheckDate === today
+        return { habit, partnership, partnerInfo, partnerCheckedToday }
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+  }, [activePartnerships, habits, user, today, getPartnerInfo])
 
   const { lists: todoLists } = useTodoLists()
   const { notes } = useQuickNotes()
   const featuredList = todoLists.find((l) => l.starred) ?? todoLists[0] ?? null
   const featuredNote = notes.find((n) => n.pinned) ?? notes[0] ?? null
 
-  const todayHabits = habits.filter((h) => isHabitScheduledForDay(h.frequency, h.customDays))
+  const sharedHabitIds = useMemo(
+    () => new Set(activePartnerships.map((p) =>
+      p.ownerUid === user?.uid ? p.ownerHabitId : (p.partnerHabitId ?? '')
+    )),
+    [activePartnerships, user]
+  )
+
+  const todayHabits = habits.filter(
+    (h) => isHabitScheduledForDay(h.frequency, h.customDays) && !sharedHabitIds.has(h.id)
+  )
   const completedToday = logs.filter((l) => l.date === today)
 
   const { current: currentStreak } = calculateStreak(allLogs)
@@ -207,6 +316,33 @@ export function DashboardPage() {
           </div>
         )}
       </motion.section>
+
+      {/* Shared habits — "Com amigos" */}
+      {sharedHabitsToday.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Users size={16} className="text-violet-500" />
+            <h2 className="font-bold text-slate-900 dark:text-white">Com amigos</h2>
+          </div>
+          <div className="space-y-3">
+            {sharedHabitsToday.map(({ habit, partnerInfo, partnerCheckedToday }) => (
+              <SharedHabitCard
+                key={habit.id}
+                habit={habit}
+                partnerInfo={partnerInfo}
+                partnerCheckedToday={partnerCheckedToday}
+                completed={!!logs.find((l) => l.habitId === habit.id && l.date === today)}
+                onToggle={() => handleToggleHabit(habit.id)}
+              />
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       {/* Todo + Notes grid */}
       <motion.section
