@@ -38,27 +38,37 @@ function SharedHabitCard({
   completed: boolean
   onToggle: () => void
 }) {
+  const bothCompleted = completed && partnerCheckedToday
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`card p-4 flex items-center gap-4 transition-all ${
-        completed ? 'ring-2 ring-emerald-300 dark:ring-emerald-700/60' : ''
+      className={`p-4 flex items-center gap-4 transition-all rounded-2xl ${
+        bothCompleted
+          ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-300/50 dark:shadow-violet-900/50'
+          : completed
+            ? 'card ring-2 ring-emerald-300 dark:ring-emerald-700/60'
+            : 'card'
       }`}
     >
       {/* Emoji + partner avatar overlay */}
       <div className="relative flex-shrink-0">
         <div
           className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${
-            completed
-              ? 'bg-emerald-100 dark:bg-emerald-900/30'
-              : 'bg-slate-100 dark:bg-slate-800'
+            bothCompleted
+              ? 'bg-white/20'
+              : completed
+                ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                : 'bg-slate-100 dark:bg-slate-800'
           }`}
         >
           {habit.emoji}
         </div>
-        <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full ring-2 ring-white dark:ring-slate-900 overflow-hidden flex-shrink-0">
+        <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full ring-2 overflow-hidden flex-shrink-0 ${
+          bothCompleted ? 'ring-white/40' : 'ring-white dark:ring-slate-900'
+        }`}>
           {partnerInfo.photo ? (
             <img src={partnerInfo.photo} alt={partnerInfo.name} className="w-full h-full object-cover" />
           ) : (
@@ -71,26 +81,43 @@ function SharedHabitCard({
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className={`font-bold text-sm truncate ${completed ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+        <p className={`font-bold text-sm truncate ${
+          bothCompleted
+            ? 'text-white'
+            : completed
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-slate-900 dark:text-white'
+        }`}>
           {habit.name}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          <span className="text-xs text-slate-400">
-            com {partnerInfo.name.split(' ')[0]}
-          </span>
-          {partnerCheckedToday && (
-            <span className="text-xs text-emerald-500 font-medium">· já fez hoje 🎉</span>
+          {bothCompleted ? (
+            <span className="text-xs text-white/85 font-semibold">Parabéns, ambos fizeram! 🎉</span>
+          ) : (
+            <>
+              <span className="text-xs text-slate-400">
+                com {partnerInfo.name.split(' ')[0]}
+              </span>
+              {partnerCheckedToday && (
+                <span className="text-xs text-emerald-500 font-medium">· já fez hoje 🎉</span>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* Toggle */}
+      {/* Toggle — locked after completion */}
       <button
-        onClick={onToggle}
-        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 active:scale-90 ${
-          completed
-            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-500'
+        onClick={completed ? undefined : onToggle}
+        disabled={completed}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+          completed ? 'cursor-default' : 'active:scale-90'
+        } ${
+          bothCompleted
+            ? 'bg-white/25 text-white'
+            : completed
+              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-500'
         }`}
       >
         {completed ? (
