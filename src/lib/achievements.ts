@@ -118,4 +118,42 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     points: 150,
     condition: (s) => s.longestStreak >= 14,
   },
+
+  // ── Social achievements ──────────────────────────────────────────
+  {
+    id: 'first_friend',
+    title: 'Primeiro Amigo',
+    description: 'Conecte-se com seu primeiro amigo',
+    emoji: '🤝',
+    gradient: 'from-sky-400 to-violet-500',
+    points: 20,
+    condition: (s) => s.friendsCount >= 1,
+  },
+  {
+    id: 'sync_first',
+    title: 'Sincronizados',
+    description: 'Ambos fizeram o mesmo hábito no mesmo dia pela primeira vez',
+    emoji: '🫂',
+    gradient: 'from-violet-500 to-fuchsia-500',
+    points: 30,
+    condition: (s) => s.partnerBonusCount >= 1,
+  },
+  {
+    id: 'sync_5',
+    title: 'Dupla Dinâmica',
+    description: '5 vezes que vocês dois fizeram juntos',
+    emoji: '🔥',
+    gradient: 'from-fuchsia-500 to-pink-500',
+    points: 75,
+    condition: (s) => s.partnerBonusCount >= 5,
+  },
+  {
+    id: 'sync_30',
+    title: 'Parceiros Inseparáveis',
+    description: '30 dias fazendo hábitos juntos',
+    emoji: '💫',
+    gradient: 'from-violet-600 to-sky-500',
+    points: 250,
+    condition: (s) => s.partnerBonusCount >= 30,
+  },
 ]

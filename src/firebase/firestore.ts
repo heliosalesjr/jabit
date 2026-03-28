@@ -549,7 +549,10 @@ export async function markPartnershipCheckIn(
 
   if (data[partnerField] === today) {
     // Partner already checked in — award bonus to current user
-    await updateDoc(doc(db, 'users', uid), { totalPoints: increment(10) })
+    await updateDoc(doc(db, 'users', uid), {
+      totalPoints: increment(10),
+      partnerBonusCount: increment(1),
+    })
     return true
   }
 

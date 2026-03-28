@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useHabits } from '../hooks/useHabits'
 import { useJournal } from '../hooks/useJournal'
+import { useFriends } from '../hooks/useFriends'
 import { useAchievements } from '../hooks/useAchievements'
 import { AchievementCard } from '../components/achievements/AchievementCard'
 import { ACHIEVEMENTS } from '../lib/achievements'
@@ -24,6 +25,7 @@ export function AchievementsPage() {
   }, [user])
 
   const { current: currentStreak, longest: longestStreak } = calculateStreak(allLogs)
+  const { friendships } = useFriends()
 
   const stats: UserStats = {
     currentStreak,
@@ -32,6 +34,8 @@ export function AchievementsPage() {
     totalJournalEntries: entries.length,
     totalPoints: profile?.totalPoints ?? 0,
     habitsCount: habits.length,
+    friendsCount: friendships.length,
+    partnerBonusCount: profile?.partnerBonusCount ?? 0,
   }
 
   const { achievements } = useAchievements(stats)
@@ -67,21 +71,57 @@ export function AchievementsPage() {
       </motion.div>
 
       {/* Achievements grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {ACHIEVEMENTS.map((def, i) => (
-          <motion.div
-            key={def.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-          >
-            <AchievementCard
-              def={def}
-              unlocked={achievements.find((a) => a.id === def.id)}
-            />
-          </motion.div>
-        ))}
-      </div>
+      {(() => {
+        const SOCIAL_IDS = new Set(['first_friend', 'sync_first', 'sync_5', 'sync_30'])
+        const solo = ACHIEVEMENTS.filter((d) => !SOCIAL_IDS.has(d.id))
+        const social = ACHIEVEMENTS.filter((d) => SOCIAL_IDS.has(d.id))
+
+        return (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+              {solo.map((def, i) => (
+                <motion.div
+                  key={def.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  <AchievementCard
+                    def={def}
+                    unlocked={achievements.find((a) => a.id === def.id)}
+                  />
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mb-3"
+            >
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-1 mb-3 flex items-center gap-2">
+                🤝 Com amigos
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {social.map((def, i) => (
+                  <motion.div
+                    key={def.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.32 + i * 0.04 }}
+                  >
+                    <AchievementCard
+                      def={def}
+                      unlocked={achievements.find((a) => a.id === def.id)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )
+      })()}
     </div>
   )
 }

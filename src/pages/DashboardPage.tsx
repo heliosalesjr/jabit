@@ -21,6 +21,7 @@ import { ACHIEVEMENTS } from '../lib/achievements'
 import { addHabit, toggleHabitLog, getAllHabitLogs, subscribeUserProfile, updateTodoListItems, createTodoList, markPartnershipCheckIn } from '../firebase/firestore'
 import { calculateStreak, getTodayISO, isHabitScheduledForDay } from '../lib/streaks'
 import { useHabitPartnerships } from '../hooks/useHabitPartnerships'
+import { useFriends } from '../hooks/useFriends'
 import type { HabitLog, UserStats, UserProfile, TodoItem } from '../types'
 
 // ─── Shared Habit Card ────────────────────────────────────────────
@@ -162,6 +163,7 @@ export function DashboardPage() {
   }, [user])
 
   const { getPartnershipForHabit, getPartnerInfo, activePartnerships } = useHabitPartnerships()
+  const { friendships } = useFriends()
 
   const sharedHabitsToday = useMemo(() => {
     return activePartnerships
@@ -207,6 +209,8 @@ export function DashboardPage() {
     totalJournalEntries: entries.length,
     totalPoints: profile?.totalPoints ?? 0,
     habitsCount: habits.length,
+    friendsCount: friendships.length,
+    partnerBonusCount: profile?.partnerBonusCount ?? 0,
   }
 
   const { achievements } = useAchievements(stats)

@@ -7,10 +7,11 @@ import { useTheme } from '../context/ThemeContext'
 import { useHabits } from '../hooks/useHabits'
 import { useJournal } from '../hooks/useJournal'
 import { useFriends } from '../hooks/useFriends'
+import { useAchievements } from '../hooks/useAchievements'
 import { subscribeUserProfile, getAllHabitLogs } from '../firebase/firestore'
 import { signOut } from '../firebase/auth'
 import { calculateStreak } from '../lib/streaks'
-import type { UserProfile } from '../types'
+import type { UserProfile, UserStats } from '../types'
 
 // ─── Stat Card ─────────────────────────────────────────────────────
 
@@ -62,6 +63,19 @@ export function ProfilePage() {
       setCurrentStreak(calculateStreak(logs).current)
     })
   }, [user])
+
+  const stats: UserStats = {
+    currentStreak,
+    longestStreak: profile?.longestStreak ?? 0,
+    totalHabitsCompleted: totalCompletions,
+    totalJournalEntries: entries.length,
+    totalPoints: profile?.totalPoints ?? 0,
+    habitsCount: habits.length,
+    friendsCount: friendProfiles.length,
+    partnerBonusCount: profile?.partnerBonusCount ?? 0,
+  }
+
+  useAchievements(stats)
 
   const handleSignOut = async () => {
     try {

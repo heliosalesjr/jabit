@@ -9,6 +9,7 @@ export interface UserProfile {
   totalPoints: number
   currentStreak: number
   longestStreak: number
+  partnerBonusCount: number
   theme: 'light' | 'dark'
 }
 
@@ -127,6 +128,8 @@ export interface UserStats {
   totalJournalEntries: number
   totalPoints: number
   habitsCount: number
+  friendsCount: number
+  partnerBonusCount: number
 }
 
 export interface FriendRequest {
