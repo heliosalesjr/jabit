@@ -398,6 +398,10 @@ export function DashboardPage() {
               const newItem: TodoItem = { id: Math.random().toString(36).slice(2, 10), text, done: false }
               await updateTodoListItems(user.uid, featuredList.id, [...featuredList.items, newItem])
             }}
+            onReorderItems={async (items) => {
+              if (!user) return
+              await updateTodoListItems(user.uid, featuredList.id, items)
+            }}
           />
         ) : (
           <button
