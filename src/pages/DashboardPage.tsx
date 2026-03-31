@@ -422,10 +422,10 @@ export function DashboardPage() {
         ) : (
           <button
             onClick={async () => { if (user) { const { createQuickNote: create } = await import('../firebase/firestore'); await create(user.uid, 'yellow') } }}
-            className="card p-4 flex items-center gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
+            className="card p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-2 border-dashed border-slate-200 dark:border-slate-700"
           >
             <span className="text-2xl">📝</span>
-            <div>
+            <div className="text-center">
               <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">Criar nota rápida</p>
               <p className="text-xs text-slate-400">Clique para começar</p>
             </div>
