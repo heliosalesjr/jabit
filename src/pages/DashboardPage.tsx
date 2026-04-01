@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Flame, BookOpen, Trophy, Plus, ArrowRight, Check, Users } from 'lucide-react'
+import { Flame, BookOpen, Trophy, Plus, ArrowRight, Check, Users, Grid3X3 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
@@ -12,6 +12,7 @@ import { useJournal } from '../hooks/useJournal'
 import { useAchievements } from '../hooks/useAchievements'
 import { useTodoLists } from '../hooks/useTodoLists'
 import { useQuickNotes } from '../hooks/useQuickNotes'
+import { YearGrid } from '../components/dashboard/YearGrid'
 import { HabitCard } from '../components/habits/HabitCard'
 import { HabitForm } from '../components/habits/HabitForm'
 import { TodoListBlock } from '../components/todos/TodoListBlock'
@@ -141,6 +142,7 @@ export function DashboardPage() {
   const [allLogs, setAllLogs] = useState<HabitLog[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [showHabitForm, setShowHabitForm] = useState(false)
+  const [showYearGrid, setShowYearGrid] = useState(false)
 
   const today = getTodayISO()
   const todayDate = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
@@ -269,12 +271,21 @@ export function DashboardPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <p className="text-slate-500 dark:text-slate-400 text-sm capitalize">{todayDate}</p>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white mt-1">
-          {greeting()},{' '}
-          <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
-            {user?.displayName?.split(' ')[0]} 👋
-          </span>
-        </h1>
+        <div className="flex items-center justify-between mt-1">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white">
+            {greeting()},{' '}
+            <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+              {user?.displayName?.split(' ')[0]} 👋
+            </span>
+          </h1>
+          <button
+            onClick={() => setShowYearGrid(true)}
+            className="p-2 rounded-xl text-slate-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+            title="Ver ano em pontos"
+          >
+            <Grid3X3 size={20} />
+          </button>
+        </div>
       </motion.div>
 
       {/* Stats row */}
@@ -498,6 +509,13 @@ export function DashboardPage() {
         onClose={() => setShowHabitForm(false)}
         onSave={handleAddHabit}
         habitCount={habits.length}
+      />
+
+      <YearGrid
+        open={showYearGrid}
+        habitLogs={allLogs}
+        journalEntries={entries}
+        onClose={() => setShowYearGrid(false)}
       />
     </div>
   )
