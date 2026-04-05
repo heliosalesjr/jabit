@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useHabits } from '../hooks/useHabits'
 import { useFriends } from '../hooks/useFriends'
 import { useHabitPartnerships } from '../hooks/useHabitPartnerships'
+import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
 import { HabitForm } from '../components/habits/HabitForm'
 import { Button } from '../components/ui/Button'
 import {
@@ -18,6 +19,11 @@ import {
   rejectHabitPartnership,
   cancelHabitPartnership,
 } from '../firebase/firestore'
+import {
+  createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+} from '../lib/googleCalendar'
 import { calculateStreak } from '../lib/streaks'
 import type { Habit, HabitLog, HabitPartnership, UserProfile } from '../types'
 
@@ -99,6 +105,7 @@ export function HabitsPage() {
   const { friendProfiles } = useFriends()
   const { pendingInvites, activePartnerships, getPartnershipForHabit, getPartnerInfo } =
     useHabitPartnerships()
+  const { getToken } = useGoogleCalendar()
 
   const [showForm, setShowForm] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
@@ -119,7 +126,16 @@ export function HabitsPage() {
   const handleAddHabit = async (data: Parameters<typeof addHabit>[1]) => {
     if (!user) return
     try {
-      await addHabit(user.uid, data)
+      const ref = await addHabit(user.uid, data)
+
+      if (data.googleCalendarSync) {
+        const token = getToken()
+        if (token) {
+          const eventId = await createCalendarEvent(data, token)
+          if (eventId) await updateHabit(user.uid, ref.id, { googleCalendarEventId: eventId })
+        }
+      }
+
       toast.success('Hábito criado! 🎯')
     } catch {
       toast.error('Erro ao criar hábito')
@@ -130,6 +146,27 @@ export function HabitsPage() {
     if (!user || !editingHabit) return
     try {
       await updateHabit(user.uid, editingHabit.id, data)
+
+      const token = getToken()
+      if (token) {
+        const wasSync = editingHabit.googleCalendarSync
+        const isSync = data.googleCalendarSync
+        const eventId = editingHabit.googleCalendarEventId
+
+        if (isSync && eventId) {
+          // Already synced — update the event
+          await updateCalendarEvent(eventId, data, token)
+        } else if (isSync && !eventId) {
+          // Sync just enabled — create a new event
+          const newEventId = await createCalendarEvent(data, token)
+          if (newEventId) await updateHabit(user.uid, editingHabit.id, { googleCalendarEventId: newEventId })
+        } else if (!isSync && wasSync && eventId) {
+          // Sync disabled — delete the event
+          await deleteCalendarEvent(eventId, token)
+          await updateHabit(user.uid, editingHabit.id, { googleCalendarEventId: undefined })
+        }
+      }
+
       toast.success('Hábito atualizado!')
       setEditingHabit(null)
     } catch {
@@ -142,6 +179,12 @@ export function HabitsPage() {
     if (!confirm(`Arquivar "${habit.name}"?`)) return
     try {
       await archiveHabit(user.uid, habit.id)
+
+      if (habit.googleCalendarEventId) {
+        const token = getToken()
+        if (token) await deleteCalendarEvent(habit.googleCalendarEventId, token)
+      }
+
       toast.success('Hábito arquivado')
     } catch {
       toast.error('Erro ao arquivar hábito')

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { LogOut, Moon, Sun, Flame, Star, BookOpen, Target, Users, Trophy } from 'lucide-react'
+import { LogOut, Moon, Sun, Flame, Star, BookOpen, Target, Users, Trophy, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -8,6 +8,7 @@ import { useHabits } from '../hooks/useHabits'
 import { useJournal } from '../hooks/useJournal'
 import { useFriends } from '../hooks/useFriends'
 import { useAchievements } from '../hooks/useAchievements'
+import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
 import { subscribeUserProfile, getAllHabitLogs } from '../firebase/firestore'
 import { signOut } from '../firebase/auth'
 import { calculateStreak } from '../lib/streaks'
@@ -47,6 +48,7 @@ export function ProfilePage() {
   const { habits } = useHabits()
   const { entries } = useJournal()
   const { friendProfiles } = useFriends()
+  const { connected: calConnected, connecting: calConnecting, connect: connectCal, disconnect: disconnectCal } = useGoogleCalendar()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [totalCompletions, setTotalCompletions] = useState(0)
   const [currentStreak, setCurrentStreak] = useState(0)
@@ -83,6 +85,17 @@ export function ProfilePage() {
     } catch {
       toast.error('Erro ao sair')
     }
+  }
+
+  const handleCalConnect = async () => {
+    const ok = await connectCal()
+    if (ok) toast.success('Google Calendar conectado!')
+    else toast.error('Não foi possível conectar o Google Calendar')
+  }
+
+  const handleCalDisconnect = () => {
+    disconnectCal()
+    toast('Google Calendar desconectado.')
   }
 
   return (
@@ -197,6 +210,22 @@ export function ProfilePage() {
             </div>
             <span className="text-sm text-slate-400">
               {theme === 'dark' ? 'Escuro' : 'Claro'}
+            </span>
+          </button>
+
+          <button
+            onClick={calConnected ? handleCalDisconnect : handleCalConnect}
+            disabled={calConnecting}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3">
+              <Calendar size={17} className="text-slate-500" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Google Calendar
+              </span>
+            </div>
+            <span className={`text-sm font-medium ${calConnected ? 'text-emerald-500' : 'text-slate-400'}`}>
+              {calConnecting ? 'Conectando...' : calConnected ? 'Conectado' : 'Desconectado'}
             </span>
           </button>
         </div>

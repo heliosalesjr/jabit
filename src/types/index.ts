@@ -31,11 +31,14 @@ export interface Habit {
   color: HabitColor
   frequency: 'daily' | 'weekdays' | 'weekends' | 'custom'
   customDays?: number[]
+  timeWindow?: { start: string; end: string }
   targetCount: number
   order: number
   archivedAt?: Timestamp
   createdAt: Timestamp
   partnershipId?: string
+  googleCalendarEventId?: string
+  googleCalendarSync?: boolean
 }
 
 export interface HabitPartnership {
