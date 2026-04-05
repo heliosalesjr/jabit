@@ -175,7 +175,7 @@ export function DashboardPage() {
         if (!habitId) return null
         const habit = habits.find((h) => h.id === habitId)
         if (!habit) return null
-        if (!isHabitScheduledForDay(habit.frequency, habit.customDays)) return null
+        if (!isHabitScheduledForDay(habit.frequency, habit.customDays, habit.specificDates)) return null
         const partnerInfo = getPartnerInfo(partnership)
         const partnerCheckedToday = isOwner
           ? partnership.partnerLastCheckDate === today
@@ -198,7 +198,7 @@ export function DashboardPage() {
   )
 
   const todayHabits = habits.filter(
-    (h) => isHabitScheduledForDay(h.frequency, h.customDays) && !sharedHabitIds.has(h.id)
+    (h) => isHabitScheduledForDay(h.frequency, h.customDays, h.specificDates) && !sharedHabitIds.has(h.id)
   )
   const completedToday = logs.filter((l) => l.date === today)
 

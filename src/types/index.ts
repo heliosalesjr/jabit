@@ -31,7 +31,7 @@ export interface Habit {
   color: HabitColor
   frequency: 'daily' | 'weekdays' | 'weekends' | 'custom'
   customDays?: number[]
-  timeWindow?: { start: string; end: string }
+  specificDates?: string[]
   targetCount: number
   order: number
   archivedAt?: Timestamp

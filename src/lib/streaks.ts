@@ -50,12 +50,17 @@ export function getTodayISO(): string {
 
 export function isHabitScheduledForDay(
   frequency: string,
-  customDays?: number[]
+  customDays?: number[],
+  specificDates?: string[]
 ): boolean {
   const dayOfWeek = new Date().getDay() // 0=Sun, 6=Sat
   if (frequency === 'daily') return true
   if (frequency === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5
   if (frequency === 'weekends') return dayOfWeek === 0 || dayOfWeek === 6
-  if (frequency === 'custom' && customDays) return customDays.includes(dayOfWeek)
+  if (frequency === 'custom') {
+    if (specificDates?.length) return specificDates.includes(getTodayISO())
+    if (customDays?.length) return customDays.includes(dayOfWeek)
+    return false
+  }
   return true
 }
