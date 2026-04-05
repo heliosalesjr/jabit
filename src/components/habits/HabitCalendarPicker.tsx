@@ -117,18 +117,19 @@ export function HabitCalendarPicker({ selectedDates, onChange, color }: HabitCal
           const str = isoDate(date)
           const selected = selectedDates.includes(str)
           const isToday = str === todayStr
+          const isPast = str < todayStr
 
           return (
             <button
               key={str}
               type="button"
-              onClick={() => current && toggle(str)}
-              disabled={!current}
+              onClick={() => current && !isPast && toggle(str)}
+              disabled={!current || isPast}
               className={cn(
                 'aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all',
-                !current && 'opacity-20 cursor-default pointer-events-none',
-                current && !selected && 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
-                current && selected && selectedBg[color],
+                (!current || isPast) && 'opacity-20 cursor-default pointer-events-none',
+                current && !isPast && !selected && 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                current && !isPast && selected && selectedBg[color],
                 isToday && !selected && 'ring-2 ring-violet-400 dark:ring-violet-500 font-bold',
               )}
             >
