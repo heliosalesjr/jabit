@@ -154,9 +154,9 @@ export function PomodoroModal({ open, onClose }: PomodoroModalProps) {
   // ─── Egg emoji com animação dinâmica ─────────────────────────────────────────
 
   const eggVariants = {
-    idle: { rotate: 0, y: [0, -4, 0], transition: { y: { repeat: Infinity, duration: 2.4, ease: 'easeInOut' } } },
-    running: { rotate: [-2, 2, -2], transition: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } },
-    finishing: { rotate: [-12, 12, -10, 10, -8, 8, 0], transition: { repeat: Infinity, duration: 0.4, ease: 'easeInOut' } },
+    idle:      { y: [0, -4, 0],                          transition: { repeat: Infinity, duration: 2.4, ease: 'easeInOut' as const } },
+    running:   { rotate: [-2, 2, -2],                    transition: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' as const } },
+    finishing: { rotate: [-12, 12, -10, 10, -8, 8, 0],  transition: { repeat: Infinity, duration: 0.4, ease: 'easeInOut' as const } },
   }
 
   const eggState = isFinishing ? 'finishing' : isRunning ? 'running' : 'idle'

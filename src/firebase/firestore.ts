@@ -15,6 +15,8 @@ import {
   serverTimestamp,
   Timestamp,
   increment,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore'
 import { db } from './config'
 import type { UserProfile, Habit, HabitLog, JournalEntry, Achievement, TodoList, TodoItem, QuickNote, NoteColor, FriendRequest, Friendship, PendingInvite, HabitPartnership } from '../types'
@@ -453,9 +455,9 @@ export async function shareHabit(
     createdAt: serverTimestamp(),
   })
 
-  // Mark the owner's habit as shared
+  // Add this partnership to the owner's habit (supports multiple partners)
   batch.update(doc(db, 'users', owner.uid, 'habits', habit.id), {
-    partnershipId: partnershipRef.id,
+    partnershipIds: arrayUnion(partnershipRef.id),
   })
 
   await batch.commit()
@@ -496,7 +498,7 @@ export async function acceptHabitPartnership(
     targetCount: partnership.ownerHabitTargetCount,
     ...(partnership.ownerHabitCustomDays ? { customDays: partnership.ownerHabitCustomDays } : {}),
     order: Date.now(),
-    partnershipId: partnership.id,
+    partnershipIds: [partnership.id],
     createdAt: serverTimestamp(),
   })
 
@@ -519,7 +521,9 @@ export async function cancelHabitPartnership(
 ): Promise<void> {
   const batch = writeBatch(db)
   batch.delete(doc(db, 'habitPartnerships', partnershipId))
-  batch.update(doc(db, 'users', ownerUid, 'habits', habitId), { partnershipId: null })
+  batch.update(doc(db, 'users', ownerUid, 'habits', habitId), {
+    partnershipIds: arrayRemove(partnershipId),
+  })
   await batch.commit()
 }
 

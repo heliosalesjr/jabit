@@ -103,7 +103,7 @@ export function HabitsPage() {
   const { user } = useAuth()
   const { habits } = useHabits()
   const { friendProfiles } = useFriends()
-  const { pendingInvites, activePartnerships, getPartnershipForHabit, getPartnerInfo } =
+  const { pendingInvites, getPartnershipsForHabit, getPartnerInfo } =
     useHabitPartnerships()
   const { getToken } = useGoogleCalendar()
 
@@ -227,26 +227,25 @@ export function HabitsPage() {
     }
   }
 
-  const handleCancelPartnership = async (habit: Habit) => {
-    if (!user || !habit.partnershipId) return
-    const partnership = getPartnershipForHabit(habit.id)
-    if (!partnership) return
-    if (!confirm('Encerrar parceria neste hábito?')) return
+  const handleCancelPartnership = async (partnership: HabitPartnership, habitId: string) => {
+    if (!user) return
+    if (!confirm(`Encerrar parceria com ${getPartnerInfo(partnership).name.split(' ')[0]}?`)) return
     try {
-      await cancelHabitPartnership(partnership.id, user.uid, habit.id)
+      await cancelHabitPartnership(partnership.id, user.uid, habitId)
       toast('Parceria encerrada.')
     } catch {
       toast.error('Erro ao encerrar parceria')
     }
   }
 
-  // UIDs already partnered per habit (to filter friend picker)
+  // UIDs already partnered per habit (to filter friend picker — exclude current partners)
   const getUsedPartnerUids = (habitId: string): Set<string> => {
-    const partnership = activePartnerships.find(
-      (p) => p.ownerHabitId === habitId || p.partnerHabitId === habitId
-    )
-    if (!partnership) return new Set()
-    return new Set([partnership.ownerUid, partnership.partnerUid])
+    const uids = new Set<string>([user?.uid ?? ''])
+    for (const p of getPartnershipsForHabit(habitId)) {
+      uids.add(p.ownerUid)
+      uids.add(p.partnerUid)
+    }
+    return uids
   }
 
   const frequencyLabel = {
@@ -338,9 +337,9 @@ export function HabitsPage() {
           {habits.map((habit, i) => {
             const streak = getHabitStreak(habit.id)
             const total = getTotalCompletions(habit.id)
-            const partnership = getPartnershipForHabit(habit.id)
-            const partnerInfo = partnership ? getPartnerInfo(partnership) : null
-            const isOwner = partnership?.ownerUid === user?.uid
+            const habitPartnerships = getPartnershipsForHabit(habit.id)
+            const isOwner = habitPartnerships.some((p) => p.ownerUid === user?.uid)
+            const isPartner = !isOwner && habitPartnerships.length > 0
 
             return (
               <motion.div
@@ -357,20 +356,34 @@ export function HabitsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-slate-900 dark:text-white truncate">{habit.name}</h3>
-                      {partnerInfo && (
-                        <div className="flex items-center gap-1.5 bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 rounded-full flex-shrink-0">
-                          {partnerInfo.photo ? (
-                            <img src={partnerInfo.photo} alt={partnerInfo.name} className="w-4 h-4 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-4 h-4 rounded-full bg-violet-400 flex items-center justify-center text-white text-[8px] font-bold">
-                              {partnerInfo.name.charAt(0)}
-                            </div>
-                          )}
-                          <span className="text-xs font-medium text-violet-600 dark:text-violet-400 truncate max-w-[80px]">
-                            {partnerInfo.name.split(' ')[0]}
-                          </span>
-                        </div>
-                      )}
+                      {/* Badges de parceiros */}
+                      {habitPartnerships.map((p) => {
+                        const info = getPartnerInfo(p)
+                        return (
+                          <div key={p.id} className="flex items-center gap-1 bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 rounded-full flex-shrink-0">
+                            {info.photo ? (
+                              <img src={info.photo} alt={info.name} className="w-4 h-4 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full bg-violet-400 flex items-center justify-center text-white text-[8px] font-bold">
+                                {info.name.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-xs font-medium text-violet-600 dark:text-violet-400 truncate max-w-[72px]">
+                              {info.name.split(' ')[0]}
+                            </span>
+                            {/* X para owner encerrar parceria individual */}
+                            {isOwner && (
+                              <button
+                                onClick={() => handleCancelPartnership(p, habit.id)}
+                                className="ml-0.5 text-violet-400 hover:text-red-400 transition-colors"
+                                title={`Encerrar parceria com ${info.name.split(' ')[0]}`}
+                              >
+                                <X size={10} />
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -386,23 +399,14 @@ export function HabitsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Share button — only for habits without partnership, or owner wanting to cancel */}
-                    {!partnership && (
+                    {/* Share: owner sempre pode convidar mais amigos; parceiro não */}
+                    {(isOwner || habitPartnerships.length === 0) && !isPartner && (
                       <button
                         onClick={() => setSharingHabit(habit)}
                         className="p-2 rounded-xl text-slate-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all"
-                        title="Compartilhar com amigo"
+                        title="Convidar amigo"
                       >
                         <Share2 size={15} />
-                      </button>
-                    )}
-                    {partnership && isOwner && (
-                      <button
-                        onClick={() => handleCancelPartnership(habit)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                        title="Encerrar parceria"
-                      >
-                        <Users size={15} />
                       </button>
                     )}
                     <button

@@ -30,18 +30,29 @@ import type { HabitLog, UserStats, UserProfile, TodoItem } from '../types'
 
 function SharedHabitCard({
   habit,
-  partnerInfo,
-  partnerCheckedToday,
+  partnerships,
+  today,
   completed,
   onToggle,
+  getPartnerInfo,
 }: {
   habit: import('../types').Habit
-  partnerInfo: { name: string; photo: string }
-  partnerCheckedToday: boolean
+  partnerships: import('../types').HabitPartnership[]
+  today: string
   completed: boolean
   onToggle: () => void
+  getPartnerInfo: (p: import('../types').HabitPartnership) => { name: string; photo: string }
 }) {
-  const bothCompleted = completed && partnerCheckedToday
+  const partners = partnerships.map((p) => ({
+    info: getPartnerInfo(p),
+    checkedToday: p.ownerUid !== (p.partnerUid) // filled below
+      ? p.partnerLastCheckDate === today
+      : p.ownerLastCheckDate === today,
+    partnership: p,
+  }))
+
+  const checkedCount = partners.filter((p) => p.checkedToday).length
+  const allCompleted = completed && checkedCount === partners.length
 
   return (
     <motion.div
@@ -49,18 +60,18 @@ function SharedHabitCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={`p-4 flex items-center gap-4 transition-all rounded-2xl ${
-        bothCompleted
+        allCompleted
           ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-300/50 dark:shadow-violet-900/50'
           : completed
             ? 'card ring-2 ring-emerald-300 dark:ring-emerald-700/60'
             : 'card'
       }`}
     >
-      {/* Emoji + partner avatar overlay */}
+      {/* Emoji + stacked partner avatars */}
       <div className="relative flex-shrink-0">
         <div
           className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${
-            bothCompleted
+            allCompleted
               ? 'bg-white/20'
               : completed
                 ? 'bg-emerald-100 dark:bg-emerald-900/30'
@@ -69,23 +80,32 @@ function SharedHabitCard({
         >
           {habit.emoji}
         </div>
-        <div className={`absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full ring-2 overflow-hidden flex-shrink-0 ${
-          bothCompleted ? 'ring-white/40' : 'ring-white dark:ring-slate-900'
-        }`}>
-          {partnerInfo.photo ? (
-            <img src={partnerInfo.photo} alt={partnerInfo.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-white text-[9px] font-bold">
-              {partnerInfo.name.charAt(0)}
+        {/* Stacked avatars (máx 3 visíveis) */}
+        <div className="absolute -bottom-1 -right-1 flex">
+          {partners.slice(0, 3).map(({ info }, i) => (
+            <div
+              key={i}
+              style={{ marginLeft: i === 0 ? 0 : -6 }}
+              className={`w-5 h-5 rounded-full ring-2 overflow-hidden flex-shrink-0 ${
+                allCompleted ? 'ring-white/40' : 'ring-white dark:ring-slate-900'
+              }`}
+            >
+              {info.photo ? (
+                <img src={info.photo} alt={info.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-white text-[7px] font-bold">
+                  {info.name.charAt(0)}
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className={`font-bold text-sm truncate ${
-          bothCompleted
+          allCompleted
             ? 'text-white'
             : completed
               ? 'text-emerald-600 dark:text-emerald-400'
@@ -94,40 +114,38 @@ function SharedHabitCard({
           {habit.name}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          {bothCompleted ? (
-            <span className="text-xs text-white/85 font-semibold">Parabéns, ambos fizeram! 🎉</span>
+          {allCompleted ? (
+            <span className="text-xs text-white/85 font-semibold">Todos fizeram hoje! 🎉</span>
           ) : (
             <>
-              <span className="text-xs text-slate-400">
-                com {partnerInfo.name.split(' ')[0]}
+              <span className={`text-xs ${allCompleted ? 'text-white/70' : 'text-slate-400'}`}>
+                com {partners.map((p) => p.info.name.split(' ')[0]).join(', ')}
               </span>
-              {partnerCheckedToday && (
-                <span className="text-xs text-emerald-500 font-medium">· já fez hoje 🎉</span>
+              {checkedCount > 0 && (
+                <span className="text-xs text-emerald-500 font-medium">
+                  · {checkedCount}/{partners.length} já {checkedCount === 1 ? 'fez' : 'fizeram'} 🎉
+                </span>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* Toggle — locked after completion */}
+      {/* Toggle */}
       <button
         onClick={completed ? undefined : onToggle}
         disabled={completed}
         className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
           completed ? 'cursor-default' : 'active:scale-90'
         } ${
-          bothCompleted
+          allCompleted
             ? 'bg-white/25 text-white'
             : completed
               ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-violet-100 dark:hover:bg-violet-900/30 hover:text-violet-500'
         }`}
       >
-        {completed ? (
-          <Check size={18} />
-        ) : (
-          <div className="w-4 h-4 rounded-full border-2 border-current" />
-        )}
+        {completed ? <Check size={18} /> : <div className="w-4 h-4 rounded-full border-2 border-current" />}
       </button>
     </motion.div>
   )
@@ -166,23 +184,30 @@ export function DashboardPage() {
     return subscribeUserProfile(user.uid, setProfile)
   }, [user])
 
-  const { getPartnershipForHabit, getPartnerInfo, activePartnerships } = useHabitPartnerships()
+  const { getPartnershipsForHabit, getPartnerInfo, activePartnerships } = useHabitPartnerships()
   const { friendships } = useFriends()
 
+  // Group shared habits by habitId — one card per habit, N partners
   const sharedHabitsToday = useMemo(() => {
-    return activePartnerships
-      .map((partnership) => {
-        const isOwner = partnership.ownerUid === user?.uid
-        const habitId = isOwner ? partnership.ownerHabitId : partnership.partnerHabitId
-        if (!habitId) return null
-        const habit = habits.find((h) => h.id === habitId)
-        if (!habit) return null
-        if (!isHabitScheduledForDay(habit.frequency, habit.customDays, habit.specificDates)) return null
-        const partnerInfo = getPartnerInfo(partnership)
-        return { habit, partnership, partnerInfo, isOwner }
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null)
-  }, [activePartnerships, habits, user, getPartnerInfo])
+    const byHabit = new Map<string, { habit: import('../types').Habit; partnerships: typeof activePartnerships; isOwner: boolean }>()
+
+    for (const partnership of activePartnerships) {
+      const isOwner = partnership.ownerUid === user?.uid
+      const habitId = isOwner ? partnership.ownerHabitId : partnership.partnerHabitId
+      if (!habitId) continue
+      const habit = habits.find((h) => h.id === habitId)
+      if (!habit) continue
+      if (!isHabitScheduledForDay(habit.frequency, habit.customDays, habit.specificDates)) continue
+
+      if (byHabit.has(habitId)) {
+        byHabit.get(habitId)!.partnerships.push(partnership)
+      } else {
+        byHabit.set(habitId, { habit, partnerships: [partnership], isOwner })
+      }
+    }
+
+    return Array.from(byHabit.values())
+  }, [activePartnerships, habits, user])
 
   const { lists: todoLists } = useTodoLists()
   const { notes } = useQuickNotes()
@@ -190,10 +215,8 @@ export function DashboardPage() {
   const featuredNote = notes.find((n) => n.pinned) ?? notes[0] ?? null
 
   const sharedHabitIds = useMemo(
-    () => new Set(activePartnerships.map((p) =>
-      p.ownerUid === user?.uid ? p.ownerHabitId : (p.partnerHabitId ?? '')
-    )),
-    [activePartnerships, user]
+    () => new Set(sharedHabitsToday.map(({ habit }) => habit.id)),
+    [sharedHabitsToday]
   )
 
   const todayHabits = habits.filter(
@@ -228,16 +251,16 @@ export function DashboardPage() {
     try {
       await toggleHabitLog(user.uid, habitId, currentLog)
       if (!currentLog) {
-        // Check for active partnership bonus
-        const partnership = getPartnershipForHabit(habitId)
-        if (partnership) {
-          const isOwner = partnership.ownerUid === user.uid
-          const bonusEarned = await markPartnershipCheckIn(user.uid, partnership.id, isOwner, today)
-          if (bonusEarned) {
-            const partner = getPartnerInfo(partnership)
-            toast.success(`Juntos com ${partner.name.split(' ')[0]} hoje! +10 pts bônus 🎉`, {
-              duration: 4000,
-            })
+        const partnerships = getPartnershipsForHabit(habitId)
+        if (partnerships.length > 0) {
+          const bonuses = await Promise.all(
+            partnerships.map((p) => markPartnershipCheckIn(user.uid, p.id, p.ownerUid === user.uid, today))
+          )
+          const bonusPartners = partnerships
+            .filter((_, i) => bonuses[i])
+            .map((p) => getPartnerInfo(p).name.split(' ')[0])
+          if (bonusPartners.length > 0) {
+            toast.success(`Juntos com ${bonusPartners.join(' e ')} hoje! +${bonusPartners.length * 10} pts bônus 🎉`, { duration: 4000 })
           } else {
             toast('Hábito concluído! 🎉', { icon: '✅' })
           }
@@ -387,23 +410,17 @@ export function DashboardPage() {
             <h2 className="font-bold text-slate-900 dark:text-white">Com amigos</h2>
           </div>
           <div className="space-y-3">
-            {sharedHabitsToday.map(({ habit, partnership, partnerInfo, isOwner }) => {
-              // Re-read directly from activePartnerships to guarantee latest check dates
-              const live = activePartnerships.find((p) => p.id === partnership.id) ?? partnership
-              const partnerCheckedToday = isOwner
-                ? live.partnerLastCheckDate === today
-                : live.ownerLastCheckDate === today
-              return (
-                <SharedHabitCard
-                  key={habit.id}
-                  habit={habit}
-                  partnerInfo={partnerInfo}
-                  partnerCheckedToday={partnerCheckedToday}
-                  completed={!!logs.find((l) => l.habitId === habit.id && l.date === today)}
-                  onToggle={() => handleToggleHabit(habit.id)}
-                />
-              )
-            })}
+            {sharedHabitsToday.map(({ habit, partnerships }) => (
+              <SharedHabitCard
+                key={habit.id}
+                habit={habit}
+                partnerships={partnerships}
+                today={today}
+                completed={!!logs.find((l) => l.habitId === habit.id && l.date === today)}
+                onToggle={() => handleToggleHabit(habit.id)}
+                getPartnerInfo={getPartnerInfo}
+              />
+            ))}
           </div>
         </motion.section>
       )}

@@ -52,6 +52,14 @@ export function useHabitPartnerships() {
     [activePartnerships]
   )
 
+  const getPartnershipsForHabit = useCallback(
+    (habitId: string): HabitPartnership[] =>
+      activePartnerships.filter(
+        (p) => p.ownerHabitId === habitId || p.partnerHabitId === habitId
+      ),
+    [activePartnerships]
+  )
+
   const getPartnerInfo = useCallback(
     (partnership: HabitPartnership): { name: string; photo: string } => {
       if (!user) return { name: '', photo: '' }
@@ -67,6 +75,7 @@ export function useHabitPartnerships() {
     pendingOutgoing,
     activePartnerships,
     getPartnershipForHabit,
+    getPartnershipsForHabit,
     getPartnerInfo,
   }
 }

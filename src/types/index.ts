@@ -36,7 +36,7 @@ export interface Habit {
   order: number
   archivedAt?: Timestamp
   createdAt: Timestamp
-  partnershipId?: string
+  partnershipIds?: string[]
   googleCalendarEventId?: string
   googleCalendarSync?: boolean
 }
