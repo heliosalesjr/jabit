@@ -13,6 +13,7 @@ import { useAchievements } from '../hooks/useAchievements'
 import { useTodoLists } from '../hooks/useTodoLists'
 import { useQuickNotes } from '../hooks/useQuickNotes'
 import { YearGrid } from '../components/dashboard/YearGrid'
+import { PomodoroModal } from '../components/dashboard/PomodoroModal'
 import { HabitCard } from '../components/habits/HabitCard'
 import { HabitForm } from '../components/habits/HabitForm'
 import { TodoListBlock } from '../components/todos/TodoListBlock'
@@ -143,6 +144,7 @@ export function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [showHabitForm, setShowHabitForm] = useState(false)
   const [showYearGrid, setShowYearGrid] = useState(false)
+  const [showPomodoro, setShowPomodoro] = useState(false)
 
   const today = getTodayISO()
   const todayDate = format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })
@@ -290,27 +292,43 @@ export function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-3 gap-4 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8"
       >
-        <div className="card p-4 text-center">
+        <div className="card p-3 text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <Flame size={16} className="text-orange-500" />
+            <Flame size={15} className="text-orange-500" />
             <span className="text-2xl font-black text-slate-900 dark:text-white">{currentStreak}</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">dias seguidos</p>
         </div>
-        <div className="card p-4 text-center">
+        <div className="card p-3 text-center">
           <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
             {allLogs.length}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">completions</p>
         </div>
-        <div className="card p-4 text-center">
+        <div className="card p-3 text-center">
           <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
             {profile?.totalPoints ?? 0}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">pontos ✨</p>
         </div>
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => setShowPomodoro(true)}
+          className="card p-3 text-center hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors group"
+        >
+          <div className="flex items-center justify-center mb-1">
+            <motion.span
+              animate={{ rotate: [0, -8, 8, -4, 4, 0] }}
+              transition={{ repeat: Infinity, repeatDelay: 4, duration: 0.6 }}
+              className="text-2xl"
+            >
+              🥚
+            </motion.span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-violet-500 transition-colors">foco</p>
+        </motion.button>
       </motion.div>
 
       {/* Today's habits */}
@@ -507,6 +525,8 @@ export function DashboardPage() {
           </div>
         </motion.section>
       )}
+
+      <PomodoroModal open={showPomodoro} onClose={() => setShowPomodoro(false)} />
 
       <HabitForm
         open={showHabitForm}
