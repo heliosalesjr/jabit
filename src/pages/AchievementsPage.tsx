@@ -11,6 +11,65 @@ import { getAllHabitLogs, subscribeUserProfile } from '../firebase/firestore'
 import { calculateStreak } from '../lib/streaks'
 import type { HabitLog, UserStats, UserProfile } from '../types'
 
+// ─── tipos temporários (mover para src/types/index.ts quando implementar o Firestore) ───
+type EggType = 'forest' | 'river' | 'night' | 'stellar' | 'partnership'
+type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+type CreatureStage = 1 | 2 | 3
+
+interface EggData {
+  id: string
+  type: EggType
+  status: 'incubating' | 'locked'
+  currentXP: number
+  requiredXP: number
+  rarity: Rarity
+}
+
+interface CreatureData {
+  id: string
+  speciesId: string
+  name: string
+  stage: CreatureStage
+  rarity: Rarity
+  emoji: string
+}
+
+// ─── dados mock — substituir por hooks do Firestore ───
+const MOCK_ACTIVE_EGG: EggData = {
+  id: 'egg1', type: 'forest', status: 'incubating', currentXP: 140, requiredXP: 200, rarity: 'common',
+}
+const MOCK_EGG_QUEUE: EggData[] = [
+  { id: 'egg2', type: 'river', status: 'locked', currentXP: 0, requiredXP: 350, rarity: 'uncommon' },
+  { id: 'egg3', type: 'night', status: 'locked', currentXP: 0, requiredXP: 600, rarity: 'rare' },
+]
+const MOCK_CREATURES: CreatureData[] = [
+  { id: 'c1', speciesId: 'capivara', name: 'Capivara', stage: 2, rarity: 'common', emoji: '🦫' },
+  { id: 'c2', speciesId: 'tucano', name: 'Tucano', stage: 1, rarity: 'common', emoji: '🦜' },
+]
+const MVP_SPECIES = [
+  { speciesId: 'capivara', name: 'Capivara', rarity: 'common' as Rarity, emoji: '🦫' },
+  { speciesId: 'tucano', name: 'Tucano', rarity: 'common' as Rarity, emoji: '🦜' },
+  { speciesId: 'onca', name: 'Onça-pintada', rarity: 'uncommon' as Rarity, emoji: '🐆' },
+  { speciesId: 'dragao', name: 'Dragão das Serras', rarity: 'rare' as Rarity, emoji: '🐉' },
+]
+
+// ─── helpers visuais ───
+const EGG_VISUALS: Record<EggType, { emoji: string; label: string; gradient: string }> = {
+  forest:      { emoji: '🥚', label: 'Ovo da Floresta', gradient: 'from-green-400 to-emerald-600' },
+  river:       { emoji: '🥚', label: 'Ovo do Rio',      gradient: 'from-cyan-400 to-blue-600' },
+  night:       { emoji: '🥚', label: 'Ovo Noturno',     gradient: 'from-violet-500 to-purple-800' },
+  stellar:     { emoji: '🥚', label: 'Ovo Estelar',     gradient: 'from-yellow-300 to-amber-500' },
+  partnership: { emoji: '🥚', label: 'Ovo de Parceria', gradient: 'from-pink-400 to-rose-600' },
+}
+const RARITY_STYLES: Record<Rarity, { label: string; color: string }> = {
+  common:    { label: 'Comum',    color: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300' },
+  uncommon:  { label: 'Incomum',  color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+  rare:      { label: 'Raro',     color: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300' },
+  epic:      { label: 'Épico',    color: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' },
+  legendary: { label: 'Lendário', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
+}
+const STAGE_LABEL: Record<CreatureStage, string> = { 1: 'Filhote', 2: 'Jovem', 3: 'Adulto' }
+
 export function AchievementsPage() {
   const { user } = useAuth()
   const { habits } = useHabits()
@@ -41,10 +100,138 @@ export function AchievementsPage() {
   const { achievements } = useAchievements(stats)
   const unlockedCount = achievements.length
 
+  const activeEgg = MOCK_ACTIVE_EGG
+  const eggQueue = MOCK_EGG_QUEUE
+  const myCreatures = MOCK_CREATURES
+  const discoveredSpecies = new Set(myCreatures.map((c) => c.speciesId))
+
   return (
     <div className="p-6 max-w-2xl mx-auto">
+
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white">Conquistas</h1>
+        <h1 className="text-3xl font-black text-slate-900 dark:text-white">Coleção</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+          Ovos, criaturas e conquistas
+        </p>
+      </motion.div>
+
+      {/* ── Seção: Ovos ── */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Ovos</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+          1 ativo · {eggQueue.length} na fila
+        </p>
+
+        {/* Ovo ativo */}
+        <div className="rounded-3xl overflow-hidden mb-3">
+          <div className={`bg-gradient-to-br ${EGG_VISUALS[activeEgg.type].gradient} p-5 flex items-center gap-5`}>
+            <motion.div
+              animate={{ rotate: [-3, 3, -3] }}
+              transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+              className="text-6xl select-none"
+            >
+              {EGG_VISUALS[activeEgg.type].emoji}
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-white font-bold text-base">{EGG_VISUALS[activeEgg.type].label}</span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${RARITY_STYLES[activeEgg.rarity].color}`}>
+                  {RARITY_STYLES[activeEgg.rarity].label}
+                </span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3 mb-1">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(activeEgg.currentXP / activeEgg.requiredXP) * 100}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  className="bg-white h-3 rounded-full"
+                />
+              </div>
+              <p className="text-white/70 text-xs">
+                {activeEgg.currentXP} / {activeEgg.requiredXP} XP de incubação
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Fila de ovos */}
+        {eggQueue.length > 0 && (
+          <div className="flex gap-3">
+            {eggQueue.map((egg, i) => (
+              <motion.div
+                key={egg.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 + i * 0.05 }}
+                className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3"
+              >
+                <span className="text-2xl">{EGG_VISUALS[egg.type].emoji}</span>
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">
+                    {EGG_VISUALS[egg.type].label}
+                  </p>
+                  <p className={`text-xs font-medium ${RARITY_STYLES[egg.rarity].color} rounded-full px-1.5 py-0.5 inline-block mt-0.5`}>
+                    {RARITY_STYLES[egg.rarity].label}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* ── Seção: Criaturas ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-8"
+      >
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Criaturas</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+          {discoveredSpecies.size}/{MVP_SPECIES.length} descobertas
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {MVP_SPECIES.map((species, i) => {
+            const found = myCreatures.find((c) => c.speciesId === species.speciesId)
+            return (
+              <motion.div
+                key={species.speciesId}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.05 }}
+                className={`rounded-2xl p-4 flex flex-col items-center gap-2 text-center
+                  ${found
+                    ? 'bg-white dark:bg-slate-800 shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800/50'
+                  }`}
+              >
+                <span className={`text-4xl ${found ? '' : 'grayscale opacity-30'}`}>
+                  {found ? species.emoji : '❓'}
+                </span>
+                <div>
+                  <p className={`text-sm font-bold leading-tight ${found ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-600'}`}>
+                    {found ? species.name : '???'}
+                  </p>
+                  {found ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {STAGE_LABEL[found.stage]}
+                    </p>
+                  ) : null}
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${found ? RARITY_STYLES[species.rarity].color : 'bg-transparent text-slate-300 dark:text-slate-600'}`}>
+                  {found ? RARITY_STYLES[species.rarity].label : '—'}
+                </span>
+              </motion.div>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* ── Seção: Conquistas ── */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white">Conquistas</h2>
         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
           {unlockedCount}/{ACHIEVEMENTS.length} desbloqueadas
         </p>

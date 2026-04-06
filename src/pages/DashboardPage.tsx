@@ -177,13 +177,10 @@ export function DashboardPage() {
         if (!habit) return null
         if (!isHabitScheduledForDay(habit.frequency, habit.customDays, habit.specificDates)) return null
         const partnerInfo = getPartnerInfo(partnership)
-        const partnerCheckedToday = isOwner
-          ? partnership.partnerLastCheckDate === today
-          : partnership.ownerLastCheckDate === today
-        return { habit, partnership, partnerInfo, partnerCheckedToday }
+        return { habit, partnership, partnerInfo, isOwner }
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
-  }, [activePartnerships, habits, user, today, getPartnerInfo])
+  }, [activePartnerships, habits, user, getPartnerInfo])
 
   const { lists: todoLists } = useTodoLists()
   const { notes } = useQuickNotes()
@@ -372,16 +369,23 @@ export function DashboardPage() {
             <h2 className="font-bold text-slate-900 dark:text-white">Com amigos</h2>
           </div>
           <div className="space-y-3">
-            {sharedHabitsToday.map(({ habit, partnerInfo, partnerCheckedToday }) => (
-              <SharedHabitCard
-                key={habit.id}
-                habit={habit}
-                partnerInfo={partnerInfo}
-                partnerCheckedToday={partnerCheckedToday}
-                completed={!!logs.find((l) => l.habitId === habit.id && l.date === today)}
-                onToggle={() => handleToggleHabit(habit.id)}
-              />
-            ))}
+            {sharedHabitsToday.map(({ habit, partnership, partnerInfo, isOwner }) => {
+              // Re-read directly from activePartnerships to guarantee latest check dates
+              const live = activePartnerships.find((p) => p.id === partnership.id) ?? partnership
+              const partnerCheckedToday = isOwner
+                ? live.partnerLastCheckDate === today
+                : live.ownerLastCheckDate === today
+              return (
+                <SharedHabitCard
+                  key={habit.id}
+                  habit={habit}
+                  partnerInfo={partnerInfo}
+                  partnerCheckedToday={partnerCheckedToday}
+                  completed={!!logs.find((l) => l.habitId === habit.id && l.date === today)}
+                  onToggle={() => handleToggleHabit(habit.id)}
+                />
+              )
+            })}
           </div>
         </motion.section>
       )}

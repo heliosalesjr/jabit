@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   subscribeHabitPartnershipsByOwner,
@@ -26,33 +26,41 @@ export function useHabitPartnerships() {
     }
   }, [user])
 
-  // Pending invites the current user received
-  const pendingInvites = asPartner.filter((p) => p.status === 'pending')
+  const pendingInvites = useMemo(
+    () => asPartner.filter((p) => p.status === 'pending'),
+    [asPartner]
+  )
 
-  // Pending invites the current user sent
-  const pendingOutgoing = asOwner.filter((p) => p.status === 'pending')
+  const pendingOutgoing = useMemo(
+    () => asOwner.filter((p) => p.status === 'pending'),
+    [asOwner]
+  )
 
-  // Active partnerships (accepted)
-  const activePartnerships = [
-    ...asOwner.filter((p) => p.status === 'accepted'),
-    ...asPartner.filter((p) => p.status === 'accepted'),
-  ]
+  const activePartnerships = useMemo(
+    () => [
+      ...asOwner.filter((p) => p.status === 'accepted'),
+      ...asPartner.filter((p) => p.status === 'accepted'),
+    ],
+    [asOwner, asPartner]
+  )
 
-  // Look up a partnership by habit ID (works for both owner's and partner's habit)
-  const getPartnershipForHabit = (habitId: string): HabitPartnership | undefined =>
-    activePartnerships.find(
-      (p) => p.ownerHabitId === habitId || p.partnerHabitId === habitId
-    )
+  const getPartnershipForHabit = useCallback(
+    (habitId: string): HabitPartnership | undefined =>
+      activePartnerships.find(
+        (p) => p.ownerHabitId === habitId || p.partnerHabitId === habitId
+      ),
+    [activePartnerships]
+  )
 
-  // Get the display info for the partner (from current user's perspective)
-  const getPartnerInfo = (
-    partnership: HabitPartnership
-  ): { name: string; photo: string } => {
-    if (!user) return { name: '', photo: '' }
-    return user.uid === partnership.ownerUid
-      ? { name: partnership.partnerName, photo: partnership.partnerPhoto }
-      : { name: partnership.ownerName, photo: partnership.ownerPhoto }
-  }
+  const getPartnerInfo = useCallback(
+    (partnership: HabitPartnership): { name: string; photo: string } => {
+      if (!user) return { name: '', photo: '' }
+      return user.uid === partnership.ownerUid
+        ? { name: partnership.partnerName, photo: partnership.partnerPhoto }
+        : { name: partnership.ownerName, photo: partnership.ownerPhoto }
+    },
+    [user]
+  )
 
   return {
     pendingInvites,
