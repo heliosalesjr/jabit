@@ -354,6 +354,46 @@ export function DashboardPage() {
         </motion.button>
       </motion.div>
 
+      {/* Egg incubation widget */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-8"
+      >
+        <Link to="/achievements">
+          <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-green-400 to-emerald-600 p-4 flex items-center gap-4 hover:opacity-95 transition-opacity active:scale-[0.99]">
+            {/* Ovo */}
+            <motion.span
+              animate={{ rotate: [-3, 3, -3] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' as const }}
+              className="text-5xl select-none flex-shrink-0"
+            >
+              🥚
+            </motion.span>
+
+            {/* Progresso + dica */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-white font-bold text-sm">Ovo da Floresta</span>
+                <span className="text-white/70 text-xs">140 / 200 XP</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2 mb-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '70%' }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  className="bg-white h-2 rounded-full"
+                />
+              </div>
+              <p className="text-white/75 text-xs leading-snug">
+                Conclua todos os hábitos do dia ou use o Pomofocus para ganhar XP ✨
+              </p>
+            </div>
+          </div>
+        </Link>
+      </motion.div>
+
       {/* Today's habits */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
