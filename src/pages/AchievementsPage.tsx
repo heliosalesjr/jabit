@@ -100,8 +100,16 @@ export function AchievementsPage() {
   const { achievements } = useAchievements(stats)
   const unlockedCount = achievements.length
 
-  const activeEgg = MOCK_ACTIVE_EGG
-  const eggQueue = MOCK_EGG_QUEUE
+  const [activeEgg, setActiveEgg] = useState<EggData>(MOCK_ACTIVE_EGG)
+  const [eggQueue, setEggQueue] = useState<EggData[]>(MOCK_EGG_QUEUE)
+
+  const handleActivateEgg = (egg: EggData) => {
+    setActiveEgg({ ...egg, status: 'incubating' })
+    setEggQueue((q) =>
+      q.map((e) => e.id === egg.id ? { ...activeEgg, status: 'locked' } : e)
+    )
+  }
+
   const myCreatures = MOCK_CREATURES
   const discoveredSpecies = new Set(myCreatures.map((c) => c.speciesId))
 
@@ -120,14 +128,16 @@ export function AchievementsPage() {
         <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Ovos</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
           1 ativo · {eggQueue.length} na fila
+          {eggQueue.length > 0 && <span className="text-violet-400 dark:text-violet-500"> · toque na fila para trocar</span>}
         </p>
 
         {/* Ovo ativo */}
         <div className="rounded-3xl overflow-hidden mb-3">
           <div className={`bg-gradient-to-br ${EGG_VISUALS[activeEgg.type].gradient} p-5 flex items-center gap-5`}>
             <motion.div
+              key={activeEgg.id}
               animate={{ rotate: [-3, 3, -3] }}
-              transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+              transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' as const }}
               className="text-6xl select-none"
             >
               {EGG_VISUALS[activeEgg.type].emoji}
@@ -141,6 +151,7 @@ export function AchievementsPage() {
               </div>
               <div className="w-full bg-white/20 rounded-full h-3 mb-1">
                 <motion.div
+                  key={activeEgg.id}
                   initial={{ width: 0 }}
                   animate={{ width: `${(activeEgg.currentXP / activeEgg.requiredXP) * 100}%` }}
                   transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -154,16 +165,18 @@ export function AchievementsPage() {
           </div>
         </div>
 
-        {/* Fila de ovos */}
+        {/* Fila de ovos — clicáveis para ativar */}
         {eggQueue.length > 0 && (
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             {eggQueue.map((egg, i) => (
-              <motion.div
+              <motion.button
                 key={egg.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 + i * 0.05 }}
-                className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleActivateEgg(egg)}
+                className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-2xl px-4 py-3 transition-colors group text-left"
               >
                 <span className="text-2xl">{EGG_VISUALS[egg.type].emoji}</span>
                 <div>
@@ -174,7 +187,10 @@ export function AchievementsPage() {
                     {RARITY_STYLES[egg.rarity].label}
                   </p>
                 </div>
-              </motion.div>
+                <span className="text-xs font-semibold text-violet-400 dark:text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1 flex-shrink-0">
+                  Ativar →
+                </span>
+              </motion.button>
             ))}
           </div>
         )}
