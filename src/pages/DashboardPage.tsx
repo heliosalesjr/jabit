@@ -492,6 +492,14 @@ export function DashboardPage() {
               if (!user) return
               await updateTodoListItems(user.uid, featuredList.id, items)
             }}
+            onClearItems={async () => {
+              if (!user) return
+              await updateTodoListItems(user.uid, featuredList.id, [])
+            }}
+            onDeleteItem={async (itemId) => {
+              if (!user) return
+              await updateTodoListItems(user.uid, featuredList.id, featuredList.items.filter((i) => i.id !== itemId))
+            }}
           />
         ) : (
           <button

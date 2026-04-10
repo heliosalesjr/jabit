@@ -1,6 +1,6 @@
 import { useState, useRef, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, ArrowRight, GripVertical } from 'lucide-react'
+import { Plus, ArrowRight, GripVertical, ListX, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   DndContext,
@@ -25,14 +25,18 @@ interface TodoListBlockProps {
   onToggleItem: (itemId: string) => void
   onAddItem: (text: string) => void
   onReorderItems: (items: TodoItem[]) => void
+  onClearItems: () => void
+  onDeleteItem: (itemId: string) => void
 }
 
 function SortableTodoItemRow({
   item,
   onToggle,
+  onDelete,
 }: {
   item: TodoItem
   onToggle: () => void
+  onDelete: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
 
@@ -64,14 +68,20 @@ function SortableTodoItemRow({
           </svg>
         )}
       </button>
-      <span className={cn('text-sm transition-all', item.done ? 'line-through text-slate-400 dark:text-slate-600' : 'text-slate-700 dark:text-slate-300')}>
+      <span className={cn('text-sm transition-all flex-1', item.done ? 'line-through text-slate-400 dark:text-slate-600' : 'text-slate-700 dark:text-slate-300')}>
         {item.text}
       </span>
+      <button
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 transition-all flex-shrink-0"
+      >
+        <X size={12} />
+      </button>
     </div>
   )
 }
 
-export function TodoListBlock({ list, onToggleItem, onAddItem, onReorderItems }: TodoListBlockProps) {
+export function TodoListBlock({ list, onToggleItem, onAddItem, onReorderItems, onClearItems, onDeleteItem }: TodoListBlockProps) {
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -111,9 +121,20 @@ export function TodoListBlock({ list, onToggleItem, onAddItem, onReorderItems }:
             </span>
           )}
         </h3>
-        <Link to="/todos" className="text-slate-400 hover:text-violet-500 transition-colors" title="Ver todas as listas">
-          <ArrowRight size={15} />
-        </Link>
+        <div className="flex items-center gap-2">
+          {list.items.length > 0 && (
+            <button
+              onClick={onClearItems}
+              title="Limpar todos os itens"
+              className="text-slate-300 dark:text-slate-600 hover:text-orange-400 dark:hover:text-orange-500 transition-colors"
+            >
+              <ListX size={14} />
+            </button>
+          )}
+          <Link to="/todos" className="text-slate-400 hover:text-violet-500 transition-colors" title="Ver todas as listas">
+            <ArrowRight size={15} />
+          </Link>
+        </div>
       </div>
 
       {/* Items */}
@@ -121,14 +142,19 @@ export function TodoListBlock({ list, onToggleItem, onAddItem, onReorderItems }:
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pending.map((i) => i.id)} strategy={verticalListSortingStrategy}>
             {pending.map((item) => (
-              <SortableTodoItemRow key={item.id} item={item} onToggle={() => onToggleItem(item.id)} />
+              <SortableTodoItemRow
+                key={item.id}
+                item={item}
+                onToggle={() => onToggleItem(item.id)}
+                onDelete={() => onDeleteItem(item.id)}
+              />
             ))}
           </SortableContext>
         </DndContext>
         <AnimatePresence initial={false}>
           {done.map((item) => (
             <motion.div key={item.id} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2 pl-4"
+              className="flex items-center gap-2 pl-4 group"
             >
               <button
                 onClick={() => onToggleItem(item.id)}
@@ -138,7 +164,13 @@ export function TodoListBlock({ list, onToggleItem, onAddItem, onReorderItems }:
                   <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <span className="text-sm line-through text-slate-400 dark:text-slate-600">{item.text}</span>
+              <span className="text-sm line-through text-slate-400 dark:text-slate-600 flex-1">{item.text}</span>
+              <button
+                onClick={() => onDeleteItem(item.id)}
+                className="opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 transition-all flex-shrink-0"
+              >
+                <X size={12} />
+              </button>
             </motion.div>
           ))}
         </AnimatePresence>
